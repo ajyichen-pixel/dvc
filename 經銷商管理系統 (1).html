@@ -1,0 +1,3585 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>經銷商業績管理系統</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif;background:#f1f5f9;color:#1e293b;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* TOP BAR */
+#topbar{background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:0 24px;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 10px rgba(30,58,95,0.3)}
+#topbar h1{color:#fff;font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px}
+#topbar-nav{display:flex;gap:5px}
+.nav-btn{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-weight:600;font-size:12px;transition:all .15s;font-family:inherit}
+.nav-btn.active{background:#fff;color:#2563eb}
+.nav-btn:not(.active){background:rgba(255,255,255,0.13);color:#fff}
+.nav-btn:not(.active):hover{background:rgba(255,255,255,0.22)}
+
+/* LAYOUT */
+#body{display:flex;flex:1;overflow:hidden}
+#main{flex:1;overflow:auto;padding:20px 24px}
+
+/* PANELS */
+.panel{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 5px rgba(0,0,0,0.06)}
+.panel-title{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+
+/* BADGES */
+.badge{font-size:11px;padding:2px 8px;border-radius:99px;font-weight:700;white-space:nowrap}
+.b-green{background:#dcfce7;color:#15803d}
+.b-blue{background:#dbeafe;color:#1d4ed8}
+.b-amber{background:#fef9c3;color:#a16207}
+.b-gray{background:#f1f5f9;color:#64748b}
+.b-purple{background:#f3e8ff;color:#7e22ce}
+.b-red{background:#fef2f2;color:#dc2626}
+.b-teal{background:#ccfbf1;color:#0f766e}
+
+/* KPI cards */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.kcard{background:#fff;border-radius:11px;padding:14px 16px;box-shadow:0 1px 5px rgba(0,0,0,0.06);border-top:3px solid}
+.kcard-val{font-size:20px;font-weight:900;color:#0f172a;margin-top:6px}
+.kcard-lbl{font-size:11px;color:#94a3b8;margin-top:2px}
+
+/* TABLE */
+.tbl-wrap{border-radius:10px;overflow:hidden;border:1px solid #f1f5f9}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 13px;font-size:11px;color:#94a3b8;font-weight:700;background:#f8fafc;border-bottom:1px solid #f1f5f9;white-space:nowrap;text-align:left;user-select:none}
+th.sort{cursor:pointer}th.sort:hover{color:#2563eb}
+td{padding:10px 13px;font-size:13px;border-bottom:1px solid #f9fafb;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+.td-bold{font-weight:700}
+
+/* BUTTONS */
+.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit;transition:all .15s}
+.btn-primary{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,0.3)}
+.btn-green{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 2px 8px rgba(22,163,74,0.25)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-ghost{background:#f1f5f9;color:#475569;border:none}
+.btn-danger{background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+.view-btn{background:#eff6ff;color:#2563eb;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-weight:700;font-size:11px;font-family:inherit}
+
+/* DETAIL TABS */
+.tab-bar{display:flex;gap:0;border-bottom:2px solid #f1f5f9;margin-bottom:18px}
+.tab{padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;color:#94a3b8;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab.active{color:#2563eb;border-bottom-color:#2563eb}
+
+/* ITEM PILLS */
+.item-pill{font-size:11px;padding:2px 7px;border-radius:5px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;white-space:nowrap}
+
+/* SALESPERSON */
+.sales-card{background:#f8fafc;border-radius:9px;padding:12px 14px;margin-bottom:8px;border:1px solid #f1f5f9;display:flex;align-items:center;gap:12px}
+.sales-avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.sales-info{flex:1;min-width:0}
+.sales-name{font-size:13px;font-weight:700}
+.sales-meta{font-size:11px;color:#94a3b8;margin-top:2px}
+
+/* MODAL */
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,0.5);display:none;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(3px)}
+.modal-bg.show{display:flex}
+.modal-box{background:#fff;border-radius:14px;padding:26px;width:580px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)}
+.modal-box h3{font-size:17px;font-weight:900;margin-bottom:18px}
+.mg{margin-bottom:12px}
+.mg label{font-size:12px;font-weight:700;color:#475569;display:block;margin-bottom:4px}
+.mg input,.mg select,.mg textarea{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;background:#fafafa;transition:border .15s}
+.mg input:focus,.mg select:focus,.mg textarea:focus{border-color:#2563eb;background:#fff}
+.mg textarea{resize:vertical;min-height:60px}
+.mg-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mg-full{grid-column:1/-1}
+.item-row{display:flex;gap:7px;align-items:center;margin-bottom:6px}
+.item-row input{flex:1;padding:7px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:12px;outline:none;font-family:inherit}
+.item-row input:focus{border-color:#2563eb}
+.rm-btn{background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:6px;padding:5px 9px;cursor:pointer;font-size:12px}
+.add-item-btn{background:#f0fdf4;color:#16a34a;border:1.5px dashed #86efac;border-radius:7px;padding:6px;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;width:100%;margin-top:2px}
+.modal-btns{display:flex;gap:8px;margin-top:16px}
+.modal-cancel{flex:1;padding:10px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;font-weight:700;font-family:inherit}
+.modal-ok{flex:2;padding:10px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer;font-weight:800;font-size:13px;font-family:inherit}
+.ssel-row{display:flex;gap:6px;flex-wrap:wrap}
+.ssel{padding:6px 14px;border-radius:8px;border:2px solid #e2e8f0;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit;background:#fff;color:#64748b;transition:all .15s}
+.ssel.active{border-color:#2563eb;background:#eff6ff;color:#2563eb}
+
+/* MAP */
+#map-page{display:none}
+#map-layout{display:grid;grid-template-columns:520px 1fr;gap:18px;align-items:start}
+#svg-map-wrap{position:relative}
+#svg-map-wrap svg{width:100%;height:auto;display:block}
+.city-path{transition:all .18s;cursor:pointer}
+.city-path:hover{filter:brightness(0.88)}
+#map-tooltip{position:absolute;background:#1e293b;color:#fff;border-radius:9px;padding:12px 14px;font-size:12px;pointer-events:none;display:none;z-index:100;min-width:180px;box-shadow:0 4px 20px rgba(0,0,0,0.25);line-height:1.6}
+#map-tooltip::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);border:6px solid transparent;border-bottom:none;border-top-color:#1e293b}
+#top3-panel{display:flex;flex-direction:column;gap:12px}
+.top3-card{background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 5px rgba(0,0,0,0.06)}
+.top3-rank{font-size:22px;font-weight:900}
+.top3-city{font-size:16px;font-weight:800;margin-bottom:4px}
+.top3-amt{font-size:13px;font-weight:700;margin-bottom:10px}
+.top3-dealer{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px}
+.top3-dealer:last-child{border-bottom:none}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(16px);background:#1e293b;color:#fff;padding:9px 20px;border-radius:99px;font-size:13px;font-weight:600;opacity:0;transition:all .28s;z-index:99999;pointer-events:none}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* VISIT LOG */
+.visit-item{background:#f8fafc;border-radius:9px;padding:11px 14px;margin-bottom:8px;border-left:3px solid #e2e8f0;transition:border .15s}
+.visit-item:hover{border-left-color:#2563eb}
+.visit-date{font-size:11px;color:#94a3b8;margin-bottom:3px}
+.visit-title{font-size:13px;font-weight:700;color:#0f172a}
+.visit-note{font-size:12px;color:#64748b;margin-top:3px;line-height:1.5}
+/* ALERT BADGE */
+.alert-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:4px;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+/* GOAL BAR */
+.goal-bar{height:10px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin-top:4px}
+.goal-fill{height:100%;border-radius:99px;transition:width .6s}
+/* TAG */
+.tag{display:inline-block;font-size:10px;padding:1px 7px;border-radius:99px;margin:1px;cursor:pointer;font-weight:600}
+/* PRINT */
+@media print{#topbar,#body>:not(#main),button,.modal-bg{display:none!important}#main{padding:0!important}body{overflow:auto!important;height:auto!important}}
+
+/* CARD WALL */
+.contact-card{background:#fff;border-radius:14px;padding:0;box-shadow:0 2px 10px rgba(0,0,0,0.08);cursor:pointer;transition:all .22s;overflow:hidden;border:2px solid transparent}
+.contact-card:hover{transform:translateY(-4px);box-shadow:0 8px 28px rgba(0,0,0,0.14);border-color:#2563eb}
+.contact-card-top{height:72px;display:flex;align-items:center;justify-content:center;position:relative}
+.contact-avatar{width:60px;height:60px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;position:absolute;bottom:-20px}
+.contact-card-body{padding:28px 14px 14px;text-align:center}
+.contact-name{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:2px}
+.contact-title{font-size:11px;color:#94a3b8;margin-bottom:6px}
+.contact-company{font-size:12px;font-weight:600;color:#2563eb;margin-bottom:8px}
+.contact-info{font-size:11px;color:#64748b;line-height:1.7}
+/* LEADERBOARD */
+.lb-row{display:flex;align-items:center;gap:14px;padding:10px 16px;border-radius:10px;margin-bottom:6px;transition:all .2s;position:relative;overflow:hidden}
+.lb-row::before{content:'';position:absolute;left:0;top:0;bottom:0;border-radius:10px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+.lb-rank{font-size:18px;font-weight:900;width:32px;text-align:center;flex-shrink:0;z-index:1}
+.lb-info{flex:1;min-width:0;z-index:1}
+.lb-name{font-size:13px;font-weight:700;color:#0f172a}
+.lb-sub{font-size:11px;color:#64748b;margin-top:1px}
+.lb-amt{font-size:15px;font-weight:900;z-index:1;flex-shrink:0}
+.lb-bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:10px;opacity:0.12;transition:width 1s cubic-bezier(.4,0,.2,1)}
+/* AI CHAT */
+#ai-chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:400px}
+.ai-msg{margin-bottom:12px;display:flex;gap:10px;align-items:flex-start}
+.ai-msg.user{flex-direction:row-reverse}
+.ai-bubble{max-width:75%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6}
+.ai-bubble.bot{background:#f1f5f9;color:#1e293b;border-radius:4px 12px 12px 12px}
+.ai-bubble.user{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border-radius:12px 4px 12px 12px}
+.ai-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.ai-typing span{display:inline-block;width:6px;height:6px;border-radius:50%;background:#94a3b8;margin:0 2px;animation:typing .8s infinite}
+.ai-typing span:nth-child(2){animation-delay:.15s}
+.ai-typing span:nth-child(3){animation-delay:.3s}
+@keyframes typing{0%,80%,100%{transform:scale(1);opacity:.5}40%{transform:scale(1.3);opacity:1}}
+/* PREDICT */
+.predict-bar{height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden;margin:4px 0 2px}
+.predict-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#2563eb,#60a5fa);transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+/* TOOLS PAGE */
+.tool-card{background:#fff;border-radius:14px;padding:22px 24px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border:2px solid transparent;transition:all .2s;cursor:pointer}
+.tool-card:hover{border-color:#2563eb;transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,99,235,0.15)}
+.tool-icon{font-size:36px;margin-bottom:12px}
+.tool-name{font-size:15px;font-weight:800;color:#0f172a;margin-bottom:4px}
+.tool-desc{font-size:12px;color:#64748b;line-height:1.6}
+/* OUTPUT BOX */
+.output-box{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:18px;font-size:13px;line-height:1.8;color:#1e293b;white-space:pre-wrap;min-height:120px;max-height:420px;overflow-y:auto;font-family:'Noto Sans TC',sans-serif}
+.output-box:focus{outline:none;border-color:#2563eb}
+/* QUOTE TABLE */
+.q-table{width:100%;border-collapse:collapse;margin:12px 0}
+.q-table th{background:#1e3a5f;color:#fff;padding:9px 12px;font-size:12px;text-align:left}
+.q-table td{padding:9px 12px;font-size:13px;border-bottom:1px solid #f1f5f9}
+.q-table tr:last-child td{border-bottom:none;font-weight:800;background:#f8fafc}
+/* REPORT PRINT */
+.report-wrap{background:#fff;padding:32px;max-width:780px;margin:0 auto}
+@media print{
+  #topbar,#body>*:not(#main),.no-print{display:none!important}
+  #main{padding:0!important;overflow:visible!important}
+  body{overflow:auto!important;height:auto!important;background:#fff!important}
+  .report-wrap{padding:16px;box-shadow:none}
+}
+/* STEP INDICATOR */
+.step-bar{display:flex;gap:0;margin-bottom:20px}
+.step{flex:1;text-align:center;font-size:11px;padding:8px 4px;background:#f8fafc;color:#94a3b8;border-right:1px solid #e2e8f0;font-weight:600;transition:all .2s}
+.step:first-child{border-radius:8px 0 0 8px}
+.step:last-child{border-radius:0 8px 8px 0;border-right:none}
+.step.active{background:#2563eb;color:#fff}
+.step.done{background:#dcfce7;color:#16a34a}
+</style>
+<script id="saved-data" type="application/json">{}</script>
+</head>
+<body>
+
+<div id="topbar">
+  <h1>🏪 經銷商業績管理系統</h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="downloadWithData()" style="background:rgba(255,255,255,0.15);border:1.5px solid rgba(255,255,255,0.4);border-radius:8px;padding:6px 14px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px" title="把資料存進 HTML 檔案，下次開啟資料還在">
+      💾 存檔
+    </button>
+  </div>
+  <div id="topbar-nav">
+    
+    <button class="nav-btn active" onclick="goto('map')">🗺️ 地圖</button>
+    <button class="nav-btn" onclick="goto('dealers')">🏢 經銷商</button>
+    <button class="nav-btn" onclick="goto('cases')">📋 案件總覽</button>
+    <button class="nav-btn" onclick="goto('sales')">👤 業務人員</button>
+    <button class="nav-btn" onclick="goto('visits')">📅 拜訪記錄</button>
+    <button class="nav-btn" onclick="goto('goals')">🎯 業績目標</button>
+    <button class="nav-btn" onclick="goto('leaderboard')">🏆 排行榜</button>
+    <button class="nav-btn" onclick="goto('cardwall')">📱 名片牆</button>
+    <button class="nav-btn" onclick="goto('aichat')">🤖 AI 分析</button>
+    <button class="nav-btn" onclick="goto('tools')" style="background:linear-gradient(135deg,rgba(124,58,237,0.7),rgba(109,40,217,0.7))">🛠️ 業務工具</button>
+    <button onclick="openCardScan()" style="padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-weight:700;font-size:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-family:inherit;box-shadow:0 2px 8px rgba(245,158,11,0.4)">📷 掃名片</button>
+  </div>
+</div>
+
+<div id="body">
+<div id="main">
+
+<!-- MAP -->
+<div id="pg-map" style="display:none">
+  <div id="map-layout" style="display:grid;grid-template-columns:500px 1fr;gap:18px;align-items:start">
+    <div>
+      <div style="background:#fff;border-radius:12px;padding:10px 16px;margin-bottom:10px;box-shadow:0 1px 5px rgba(0,0,0,0.06);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:13px;font-weight:700">🗺️ 台灣經銷商分布地圖</div>
+          <div style="font-size:11px;color:#94a3b8">滑鼠移至縣市預覽案件 · 點擊展開詳情</div>
+        </div>
+        <div style="display:flex;gap:10px;font-size:11px;color:#64748b;align-items:center">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#16a34a;border-radius:50%;display:inline-block"></span>合作中(大案)</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#bbf7d0;border-radius:50%;display:inline-block;border:1px solid #86efac"></span>合作中</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;background:#93c5fd;border-radius:50%;display:inline-block"></span>洽談中</span>
+        </div>
+      </div>
+      <div id="svg-map-wrap" style="min-height:480px">
+        <div id="map-tooltip"></div>
+        <svg viewBox="0 0 800 900" xmlns="http://www.w3.org/2000/svg" id="tw-map" style="filter:drop-shadow(0 4px 16px rgba(30,58,95,0.12))"></svg>
+      </div>
+    </div>
+    <div style="overflow-y:auto;max-height:calc(100vh - 180px);position:sticky;top:0">
+      <div id="map-city-panel"></div>
+      <div class="panel" style="margin-bottom:14px">
+        <div class="panel-title">🥇 縣市案件金額 TOP 3</div>
+        <div id="top3-panel"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">縣市統計</div>
+        <div id="city-stats"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEALERS -->
+<div id="pg-dealers" style="display:none">
+  <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <input id="dealer-search" placeholder="🔍 搜尋公司、縣市、業務…" oninput="renderDealers()"
+      style="padding:8px 13px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;min-width:240px;font-family:inherit">
+    <div id="dealer-filter-btns"></div>
+    <span id="dealer-count" style="margin-left:auto;font-size:12px;color:#94a3b8"></span>
+    <button class="btn btn-primary" onclick="openDealerModal(null)">＋ 新增經銷商</button>
+  </div>
+  <div class="tbl-wrap">
+    <table><thead><tr>
+      <th>#</th>
+      <th class="sort" onclick="dealerSort('name')">公司名稱 <span id="ds-name"></span></th>
+      <th>縣市</th><th>狀態</th>
+      <th class="sort" onclick="dealerSort('monthly')">本月業績 <span id="ds-monthly"></span></th>
+      <th class="sort" onclick="dealerSort('cases')">案件數 <span id="ds-cases"></span></th>
+      <th>預計金額</th><th>負責業務</th><th>聯絡人</th><th>操作</th>
+    </tr></thead><tbody id="dealer-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- CASES (global) -->
+<div id="pg-cases" style="display:none">
+  <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap">
+    <input id="case-search" placeholder="🔍 搜尋案件、經銷商、品項…" oninput="renderAllCases()"
+      style="padding:8px 13px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;min-width:240px;font-family:inherit">
+    <div id="case-status-btns"></div>
+    <span id="case-count" style="margin-left:auto;font-size:12px;color:#94a3b8"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table><thead><tr>
+      <th>案件名稱</th><th>經銷商</th><th>業務</th><th>品項</th><th>狀態</th>
+      <th class="sort" onclick="caseGlobalSort('est')">預計金額 <span id="cgs-est"></span></th>
+      <th>實際金額</th><th>預計日期</th><th>操作</th>
+    </tr></thead><tbody id="cases-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- SALESPERSON -->
+<div id="pg-sales" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:800">👤 業務人員管理</div>
+    <button class="btn btn-primary" onclick="openSalesModal(null)">＋ 新增業務</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px" id="sales-grid"></div>
+</div>
+
+<!-- DETAIL -->
+<div id="pg-detail" style="display:none">
+  <button onclick="goto(prevPage)" style="background:none;border:none;cursor:pointer;color:#2563eb;font-weight:700;font-size:13px;margin-bottom:16px;padding:0;display:flex;align-items:center;gap:4px;font-family:inherit">← 返回</button>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start">
+    <div>
+      <!-- Info card -->
+      <div class="panel" style="margin-bottom:14px" id="d-info-card"></div>
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <div class="tab active" onclick="switchTab('cases')" id="tab-cases">📋 案件列表</div>
+        <div class="tab" onclick="switchTab('salespeople')" id="tab-salespeople">👤 業務人員</div>
+        <div class="tab" onclick="switchTab('visits')" id="tab-visits">📅 拜訪記錄</div>
+      </div>
+      <div id="tab-content-cases"></div>
+      <div id="tab-content-salespeople" style="display:none"></div>
+      <div id="tab-content-visits" style="display:none"></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px" id="d-right"></div>
+  </div>
+</div>
+
+
+<!-- VISITS PAGE -->
+<div id="pg-visits" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div style="font-size:15px;font-weight:800">📅 拜訪記錄</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="visit-search" placeholder="🔍 搜尋拜訪記錄…" oninput="renderVisits()"
+        style="padding:8px 13px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;min-width:200px;font-family:inherit">
+      <select id="visit-dealer-filter" onchange="renderVisits()"
+        style="padding:8px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;background:#fff">
+        <option value="">全部經銷商</option>
+      </select>
+      <button class="btn btn-primary" onclick="openVisitModal(null,null)">＋ 新增拜訪記錄</button>
+      <button class="btn btn-ghost" onclick="exportExcel()" style="border:1px solid #e2e8f0">📤 匯出 Excel</button>
+    </div>
+  </div>
+  <div id="visit-alerts" style="margin-bottom:12px"></div>
+  <div class="tbl-wrap">
+    <table><thead><tr>
+      <th>拜訪日期</th><th>經銷商</th><th>聯絡人</th><th>拜訪主題</th><th>談話內容</th>
+      <th>客戶反應</th><th>下次跟進</th><th>負責業務</th><th>操作</th>
+    </tr></thead><tbody id="visit-tbody"></tbody></table>
+  </div>
+</div>
+
+<!-- GOALS PAGE -->
+<div id="pg-goals" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div style="font-size:15px;font-weight:800">🎯 業績目標管理</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="openGoalModal(null)">＋ 設定目標</button>
+      <button class="btn btn-ghost" onclick="exportExcel()" style="border:1px solid #e2e8f0">📤 匯出 Excel</button>
+    </div>
+  </div>
+  <div id="goals-kpi" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px"></div>
+  <div id="goals-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px"></div>
+</div>
+
+<!-- LEADERBOARD PAGE -->
+<div id="pg-leaderboard" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div style="font-size:20px;font-weight:900">🏆 業務即時排行榜</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:2px">根據案件預計金額即時計算</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="lb-type" onchange="renderLeaderboard()" style="padding:8px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;background:#fff">
+        <option value="dealer">經銷商 PK</option>
+        <option value="sales">業務人員 PK</option>
+        <option value="city">縣市 PK</option>
+      </select>
+      <select id="lb-metric" onchange="renderLeaderboard()" style="padding:8px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;background:#fff">
+        <option value="est">案件預計金額</option>
+        <option value="monthly">本月業績</option>
+        <option value="cases">案件數</option>
+      </select>
+    </div>
+  </div>
+  <!-- TOP 3 podium -->
+  <div id="lb-podium" style="display:flex;justify-content:center;align-items:flex-end;gap:16px;margin-bottom:28px;padding:0 40px"></div>
+  <!-- Full list -->
+  <div class="panel">
+    <div id="lb-list"></div>
+  </div>
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px" id="lb-stats"></div>
+</div>
+
+<!-- CARD WALL PAGE -->
+<div id="pg-cardwall" style="display:none">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div style="font-size:20px;font-weight:900">📱 聯絡人名片牆</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input id="cw-search" placeholder="🔍 搜尋姓名、公司、電話…" oninput="renderCardWall()"
+        style="padding:8px 13px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;min-width:220px;font-family:inherit">
+      <select id="cw-filter" onchange="renderCardWall()" style="padding:8px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;background:#fff">
+        <option value="all">全部聯絡人</option>
+        <option value="dealer">經銷商聯絡人</option>
+        <option value="sales">業務人員</option>
+      </select>
+    </div>
+  </div>
+  <div id="cw-count" style="font-size:12px;color:#94a3b8;margin-bottom:14px"></div>
+  <div id="cw-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px"></div>
+</div>
+
+<!-- AI CHAT PAGE -->
+<div id="pg-aichat" style="display:none">
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:18px;height:calc(100vh - 160px)">
+    <div class="panel" style="display:flex;flex-direction:column;padding:0;overflow:hidden">
+      <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:12px 12px 0 0">
+        <div style="color:#fff;font-weight:800;font-size:15px">🤖 AI 業績分析助手</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:2px">根據你的真實資料回答問題</div>
+      </div>
+      <div id="ai-messages" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column"></div>
+      <div style="padding:12px 16px;border-top:1px solid #f1f5f9;display:flex;gap:8px">
+        <input id="ai-input" placeholder="問我任何問題，例如：哪個客戶最有潛力？" 
+          style="flex:1;padding:10px 14px;border-radius:9px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"
+          onkeydown="if(event.key==='Enter')sendAIMsg()">
+        <button onclick="sendAIMsg()" class="btn btn-primary" style="padding:10px 18px">送出</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;overflow-y:auto">
+      <!-- Quick prompts -->
+      <div class="panel">
+        <div class="panel-title">💡 快速提問</div>
+        <div style="display:flex;flex-direction:column;gap:7px" id="ai-quick-btns"></div>
+      </div>
+      <!-- AI Prediction -->
+      <div class="panel">
+        <div class="panel-title">🔮 AI 業績預測</div>
+        <div id="ai-prediction"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT DETAIL MODAL (card wall) -->
+<div class="modal-bg" id="contact-modal">
+  <div class="modal-box" style="width:440px">
+    <div id="cm-card-header" style="height:90px;border-radius:10px 10px 0 0;margin:-26px -26px 0;display:flex;align-items:center;justify-content:center;position:relative">
+      <div id="cm-avatar" style="width:70px;height:70px;border-radius:50%;border:4px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,0.2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff;position:absolute;bottom:-25px"></div>
+    </div>
+    <div style="padding-top:32px;text-align:center;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:900" id="cm-name"></div>
+      <div style="font-size:13px;color:#94a3b8;margin-top:2px" id="cm-title-pos"></div>
+      <div style="font-size:14px;font-weight:700;color:#2563eb;margin-top:3px" id="cm-company"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px" id="cm-info-grid"></div>
+    <div id="cm-cases-section"></div>
+    <div id="cm-visits-section"></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('contact')">關閉</button>
+      <button class="modal-ok" id="cm-goto-btn">查看完整資料 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLS PAGE -->
+<div id="pg-tools" style="display:none">
+  <div style="font-size:20px;font-weight:900;margin-bottom:6px">🛠️ 業務工具箱</div>
+  <div style="font-size:13px;color:#94a3b8;margin-bottom:22px">一鍵產生，複製貼上即可使用</div>
+
+  <!-- Tool selector cards -->
+  <div id="tools-home" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:28px">
+    <div class="tool-card" onclick="showTool('email')">
+      <div class="tool-icon">📧</div>
+      <div class="tool-name">AI 報價跟進信</div>
+      <div class="tool-desc">根據案件資料自動產生專業跟進 Email，一鍵複製送出</div>
+    </div>
+    <div class="tool-card" onclick="showTool('minutes')">
+      <div class="tool-icon">📋</div>
+      <div class="tool-name">AI 會議記錄</div>
+      <div class="tool-desc">輸入拜訪關鍵字，AI 自動整理成正式會議記錄格式</div>
+    </div>
+    <div class="tool-card" onclick="showTool('report')">
+      <div class="tool-icon">📊</div>
+      <div class="tool-name">經銷商專屬報表</div>
+      <div class="tool-desc">選擇經銷商產生漂亮的一頁式業績報表，可直接列印</div>
+    </div>
+    <div class="tool-card" onclick="showTool('quote')">
+      <div class="tool-icon">📄</div>
+      <div class="tool-name">報價單產生器</div>
+      <div class="tool-desc">填入品項與金額，自動產生正式報價單，可列印或截圖</div>
+    </div>
+    <div class="tool-card" onclick="showTool('forecast')">
+      <div class="tool-icon">🔮</div>
+      <div class="tool-name">年度業績預測機</div>
+      <div class="tool-desc">設定拜訪頻率與成交率，AI 自動估算到年底可以衝多少業績</div>
+    </div>
+  </div>
+
+  <!-- EMAIL TOOL -->
+  <div id="tool-email" style="display:none">
+    <button onclick="showTool(null)" class="btn btn-ghost no-print" style="margin-bottom:16px;border:1px solid #e2e8f0">← 返回工具箱</button>
+    <div style="display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start">
+      <div class="panel no-print">
+        <div class="panel-title">⚙️ 設定</div>
+        <div class="mg"><label>選擇案件 *</label>
+          <select id="em-case" onchange="updateEmailDealer()" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+            <option value="">請選擇案件</option>
+          </select>
+        </div>
+        <div class="mg"><label>收件人稱謂</label>
+          <input id="em-title" placeholder="例：陳協理、簡先生" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+        </div>
+        <div class="mg"><label>Email 類型</label>
+          <select id="em-type" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+            <option value="followup">報價跟進信</option>
+            <option value="first">初次拜訪後感謝信</option>
+            <option value="urgent">截止日前催促信</option>
+            <option value="won">成交感謝信</option>
+            <option value="intro">產品介紹信</option>
+          </select>
+        </div>
+        <div class="mg"><label>特別說明（可選）</label>
+          <textarea id="em-note" rows="3" placeholder="例：上次討論提到預算有壓力，請特別提優惠方案…" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical"></textarea>
+        </div>
+        <button onclick="generateEmail()" class="btn btn-primary" style="width:100%">🤖 AI 產生 Email</button>
+        <div id="em-loading" style="display:none;text-align:center;padding:12px;color:#64748b;font-size:13px">✍️ AI 正在撰寫中...</div>
+      </div>
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="panel-title" style="margin:0">📧 Email 預覽</div>
+          <div style="display:flex;gap:8px" class="no-print">
+            <button onclick="copyOutput('em-output')" class="btn btn-ghost" style="border:1px solid #e2e8f0;font-size:12px">📋 複製</button>
+            <button onclick="copyEmailToClipboard()" class="btn btn-primary" style="font-size:12px">✅ 複製完整信件</button>
+          </div>
+        </div>
+        <div id="em-subject-wrap" style="display:none;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;margin-bottom:4px">主旨：</div>
+          <div id="em-subject" style="background:#eff6ff;padding:8px 12px;border-radius:7px;font-size:13px;font-weight:700;color:#1d4ed8"></div>
+        </div>
+        <div id="em-output" class="output-box" contenteditable="true">請選擇案件後點擊「AI 產生 Email」</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MINUTES TOOL -->
+  <div id="tool-minutes" style="display:none">
+    <button onclick="showTool(null)" class="btn btn-ghost no-print" style="margin-bottom:16px;border:1px solid #e2e8f0">← 返回工具箱</button>
+    <div style="display:grid;grid-template-columns:380px 1fr;gap:20px;align-items:start">
+      <div class="panel no-print">
+        <div class="panel-title">⚙️ 設定</div>
+        <div class="mg"><label>選擇拜訪記錄（選填）</label>
+          <select id="mn-visit" onchange="fillMinutesFromVisit()" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+            <option value="">手動輸入</option>
+          </select>
+        </div>
+        <div class="mg"><label>會議日期</label>
+          <input id="mn-date" type="date" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+        </div>
+        <div class="mg"><label>出席人員</label>
+          <input id="mn-attendees" placeholder="例：陳協理、林業務、王工程師" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+        </div>
+        <div class="mg"><label>討論重點（關鍵字即可）*</label>
+          <textarea id="mn-keywords" rows="5" placeholder="例：
+討論台中廠空調升級
+預算約120萬
+分三期付款
+客戶希望6月完工
+需補充冷卻塔規格" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical"></textarea>
+        </div>
+        <div class="mg"><label>下次跟進事項（可選）</label>
+          <textarea id="mn-actions" rows="2" placeholder="例：寄送詳細報價單、安排廠商勘查" style="width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;resize:vertical"></textarea>
+        </div>
+        <button onclick="generateMinutes()" class="btn btn-primary" style="width:100%">🤖 AI 整理會議記錄</button>
+        <div id="mn-loading" style="display:none;text-align:center;padding:12px;color:#64748b;font-size:13px">📝 AI 正在整理中...</div>
+      </div>
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="panel-title" style="margin:0">📋 會議記錄</div>
+          <div style="display:flex;gap:8px" class="no-print">
+            <button onclick="copyOutput('mn-output')" class="btn btn-ghost" style="border:1px solid #e2e8f0;font-size:12px">📋 複製</button>
+            <button onclick="window.print()" class="btn btn-primary" style="font-size:12px">🖨️ 列印</button>
+          </div>
+        </div>
+        <div id="mn-output" class="output-box" contenteditable="true">請填寫左側資料後點擊「AI 整理會議記錄」</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT TOOL -->
+  <div id="tool-report" style="display:none">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center" class="no-print">
+      <button onclick="showTool(null)" class="btn btn-ghost" style="border:1px solid #e2e8f0">← 返回工具箱</button>
+      <select id="rp-dealer" onchange="generateReport()" style="padding:9px 14px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;min-width:220px">
+        <option value="">選擇經銷商</option>
+      </select>
+      <select id="rp-lang" style="padding:9px 14px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+        <option value="zh">中文</option>
+        <option value="en">English</option>
+      </select>
+      <button onclick="window.print()" class="btn btn-primary">🖨️ 列印 / 存 PDF</button>
+    </div>
+    <div id="rp-output" class="report-wrap">
+      <div style="text-align:center;color:#cbd5e1;padding:40px">請選擇經銷商產生報表</div>
+    </div>
+  </div>
+
+  <!-- QUOTE TOOL -->
+  <div id="tool-quote" style="display:none">
+    <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center" class="no-print">
+      <button onclick="showTool(null)" class="btn btn-ghost" style="border:1px solid #e2e8f0">← 返回工具箱</button>
+      <button onclick="window.print()" class="btn btn-primary">🖨️ 列印 / 存 PDF</button>
+      <button onclick="addQuoteItem()" class="btn btn-green no-print">＋ 新增品項</button>
+    </div>
+    <div id="qt-output" class="report-wrap">
+      <!-- Quote header form (no-print hidden on print) -->
+      <div class="no-print" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;background:#f8fafc;padding:16px;border-radius:10px">
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">報價給（公司名稱）</label>
+          <select id="qt-to" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+            <option value="">請選擇或輸入</option>
+          </select>
+        </div>
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">聯絡人</label>
+          <input id="qt-contact" placeholder="例：陳協理" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">報價編號</label>
+          <input id="qt-no" placeholder="例：QT-2025-001" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">報價日期</label>
+          <input id="qt-date" type="date" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">有效期限</label>
+          <input id="qt-valid" placeholder="例：2025/06/30" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">付款條件</label>
+          <input id="qt-payment" placeholder="例：30% 訂金，交貨後付清" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div style="grid-column:1/-1"><label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:4px">備註</label>
+          <input id="qt-note" placeholder="例：以上報價不含稅、安裝費另計" style="width:100%;padding:8px 10px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit"></div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:#64748b;font-weight:700;display:block;margin-bottom:6px">📦 報價品項</label>
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;padding:10px">
+            <div style="display:grid;grid-template-columns:2fr 2fr 0.7fr 0.7fr 1.2fr auto;gap:6px;margin-bottom:6px">
+              <span style="font-size:11px;color:#94a3b8;font-weight:700">品名</span>
+              <span style="font-size:11px;color:#94a3b8;font-weight:700">規格/說明</span>
+              <span style="font-size:11px;color:#94a3b8;font-weight:700;text-align:center">數量</span>
+              <span style="font-size:11px;color:#94a3b8;font-weight:700;text-align:center">單位</span>
+              <span style="font-size:11px;color:#94a3b8;font-weight:700;text-align:right">單價(元)</span>
+              <span></span>
+            </div>
+            <div id="qt-items-editor"></div>
+          </div>
+        </div>
+        <div style="grid-column:1/-1"><button onclick="renderQuote()" class="btn btn-primary">🔄 更新報價單預覽</button></div>
+      </div>
+      <!-- Quote preview (prints) -->
+      <div id="qt-preview"></div>
+    </div>
+  </div>
+</div>
+
+  <!-- FORECAST TOOL -->
+  <div id="tool-forecast" style="display:none">
+    <button onclick="showTool(null)" class="btn btn-ghost no-print" style="margin-bottom:16px;border:1px solid #e2e8f0">← 返回工具箱</button>
+    <div style="display:grid;grid-template-columns:400px 1fr;gap:20px;align-items:start">
+
+      <!-- 左側：輸入參數 -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="panel">
+          <div class="panel-title">📅 拜訪節奏</div>
+          <div class="mg">
+            <label>每週拜訪幾家經銷商？</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-visits-week" min="1" max="20" value="5"
+                oninput="document.getElementById('fc-vw-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#2563eb">
+              <span id="fc-vw-val" style="font-size:18px;font-weight:900;color:#2563eb;min-width:32px">5</span>
+              <span style="font-size:13px;color:#94a3b8">家/週</span>
+            </div>
+          </div>
+          <div class="mg">
+            <label>預計還有幾週可以拜訪？（到年底）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-weeks-left" min="1" max="52" value="32"
+                oninput="document.getElementById('fc-wl-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#7c3aed">
+              <span id="fc-wl-val" style="font-size:18px;font-weight:900;color:#7c3aed;min-width:32px">32</span>
+              <span style="font-size:13px;color:#94a3b8">週</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">💰 業績假設</div>
+          <div class="mg">
+            <label>每家經銷商年貢獻金額（萬元）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-revenue" min="10" max="500" value="100" step="10"
+                oninput="document.getElementById('fc-rev-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#16a34a">
+              <span id="fc-rev-val" style="font-size:18px;font-weight:900;color:#16a34a;min-width:40px">100</span>
+              <span style="font-size:13px;color:#94a3b8">萬/年</span>
+            </div>
+          </div>
+          <div class="mg">
+            <label>拜訪後願意合作的比例（成交率）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-rate" min="5" max="80" value="20"
+                oninput="document.getElementById('fc-rate-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#f59e0b">
+              <span id="fc-rate-val" style="font-size:18px;font-weight:900;color:#f59e0b;min-width:32px">20</span>
+              <span style="font-size:13px;color:#94a3b8">%</span>
+            </div>
+          </div>
+          <div class="mg">
+            <label>從合作到第一筆收入平均需要幾個月？</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-rampup" min="0" max="6" value="2"
+                oninput="document.getElementById('fc-ramp-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#dc2626">
+              <span id="fc-ramp-val" style="font-size:18px;font-weight:900;color:#dc2626;min-width:32px">2</span>
+              <span style="font-size:13px;color:#94a3b8">個月</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-title">📊 已有基礎</div>
+          <div class="mg">
+            <label>目前合作中的經銷商（自動帶入）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-existing" min="0" max="30" value="0"
+                oninput="document.getElementById('fc-ex-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#0891b2">
+              <span id="fc-ex-val" style="font-size:18px;font-weight:900;color:#0891b2;min-width:32px">0</span>
+              <span style="font-size:13px;color:#94a3b8">家</span>
+            </div>
+          </div>
+          <div class="mg">
+            <label>現有經銷商今年平均業績（萬元/家）</label>
+            <div style="display:flex;align-items:center;gap:10px">
+              <input type="range" id="fc-existing-rev" min="0" max="500" value="100" step="10"
+                oninput="document.getElementById('fc-exr-val').textContent=this.value;runForecast()"
+                style="flex:1;accent-color:#0891b2">
+              <span id="fc-exr-val" style="font-size:18px;font-weight:900;color:#0891b2;min-width:40px">100</span>
+              <span style="font-size:13px;color:#94a3b8">萬</span>
+            </div>
+          </div>
+          <button onclick="syncFromSystem()" class="btn btn-ghost" style="width:100%;border:1px solid #e2e8f0;font-size:12px">🔄 從系統自動帶入現有經銷商資料</button>
+        </div>
+      </div>
+
+      <!-- 右側：結果 -->
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- 主要預測數字 -->
+        <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:16px;padding:28px;color:#fff">
+          <div style="font-size:13px;opacity:.7;margin-bottom:6px">📍 到年底預測業績</div>
+          <div style="font-size:48px;font-weight:900;line-height:1" id="fc-total-display">—</div>
+          <div style="font-size:14px;opacity:.8;margin-top:4px">萬元</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:20px">
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px">
+              <div style="font-size:11px;opacity:.7">新開發經銷商</div>
+              <div style="font-size:22px;font-weight:900" id="fc-new-dealers">—</div>
+              <div style="font-size:11px;opacity:.6">家</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px">
+              <div style="font-size:11px;opacity:.7">新增業績貢獻</div>
+              <div style="font-size:22px;font-weight:900" id="fc-new-rev">—</div>
+              <div style="font-size:11px;opacity:.6">萬元</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.12);border-radius:10px;padding:12px">
+              <div style="font-size:11px;opacity:.7">現有基礎業績</div>
+              <div style="font-size:22px;font-weight:900" id="fc-base-rev">—</div>
+              <div style="font-size:11px;opacity:.6">萬元</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 月份分布圖 -->
+        <div class="panel">
+          <div class="panel-title">📈 逐月業績累積預測</div>
+          <div id="fc-chart" style="display:flex;align-items:flex-end;gap:4px;height:140px;padding:0 4px"></div>
+          <div id="fc-chart-labels" style="display:flex;gap:4px;padding:4px 4px 0;font-size:10px;color:#94a3b8"></div>
+        </div>
+
+        <!-- 場景比較 -->
+        <div class="panel">
+          <div class="panel-title">🎯 三種情境預測</div>
+          <div id="fc-scenarios"></div>
+        </div>
+
+        <!-- AI 建議 -->
+        <div class="panel">
+          <div class="panel-title">🤖 AI 業務建議</div>
+          <div id="fc-ai-advice" style="font-size:13px;color:#475569;line-height:1.8">
+            調整左側參數後自動顯示建議…
+          </div>
+          <button onclick="getAIForecastAdvice()" class="btn btn-primary" style="width:100%;margin-top:10px;font-size:13px">
+            🤖 讓 AI 給我更詳細的業務策略建議
+          </button>
+          <div id="fc-ai-loading" style="display:none;text-align:center;padding:10px;font-size:13px;color:#94a3b8">AI 思考中…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div><!-- /main -->
+</div><!-- /body -->
+
+<!-- DEALER MODAL -->
+<div class="modal-bg" id="dealer-modal">
+  <div class="modal-box">
+    <h3 id="dm-title">＋ 新增經銷商</h3>
+    <div class="mg-grid">
+      <div class="mg mg-full"><label>公司名稱 *</label><input id="dm-name" placeholder="輸入公司全名"/></div>
+      <div class="mg"><label>所在縣市 *</label>
+        <select id="dm-city"><option value="">請選擇縣市</option>
+          <option>台北市</option><option>新北市</option><option>基隆市</option><option>桃園市</option>
+          <option>新竹市</option><option>新竹縣</option><option>苗栗縣</option><option>台中市</option>
+          <option>彰化縣</option><option>南投縣</option><option>雲林縣</option><option>嘉義市</option>
+          <option>嘉義縣</option><option>台南市</option><option>高雄市</option><option>屏東縣</option>
+          <option>宜蘭縣</option><option>花蓮縣</option><option>台東縣</option><option>澎湖縣</option>
+        </select>
+      </div>
+      <div class="mg"><label>狀態</label>
+        <select id="dm-status"><option>合作中</option><option>洽談中</option><option>待開發</option><option>已結束</option></select>
+      </div>
+      <div class="mg"><label>聯絡人</label><input id="dm-contact" placeholder="例：陳經理"/></div>
+      <div class="mg"><label>聯絡電話</label><input id="dm-phone" placeholder="例：02-1234-5678"/></div>
+      <div class="mg"><label>本月業績（元）</label><input id="dm-monthly" type="number" placeholder="0"/></div>
+      <div class="mg"><label>本月訂單數</label><input id="dm-orders" type="number" placeholder="0"/></div>
+      <div class="mg mg-full"><label>負責業務（可多選）</label><div id="dm-sales-picker" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('dealer')">取消</button>
+      <button class="modal-ok" onclick="saveDealerModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- CASE MODAL -->
+<div class="modal-bg" id="case-modal">
+  <div class="modal-box">
+    <h3 id="cm-title">＋ 新增案件</h3>
+    <div class="mg-grid">
+      <div class="mg mg-full"><label>案件名稱 *</label><input id="cm-name" placeholder="例：台中廠房空調升級"/></div>
+      <div class="mg"><label>案件狀態</label>
+        <select id="cm-status"><option>詢價中</option><option>報價中</option><option>議價中</option><option>已成交</option><option>未成交</option><option>暫緩</option></select>
+      </div>
+      <div class="mg"><label>負責業務</label><select id="cm-sales"><option value="">未指派</option></select></div>
+      <div class="mg"><label>預計金額（元）</label><input id="cm-est" type="number" placeholder="0"/></div>
+      <div class="mg"><label>實際金額（元）</label><input id="cm-actual" type="number" placeholder="成交後填入"/></div>
+      <div class="mg"><label>預計日期</label><input id="cm-date" type="date"/></div>
+      <div class="mg mg-full"><label>備註</label><textarea id="cm-note" placeholder="補充說明…"></textarea></div>
+    </div>
+    <div class="mg">
+      <label>採購品項</label>
+      <div id="items-editor"></div>
+      <button class="add-item-btn" onclick="addItemRow()">＋ 新增品項</button>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('case')">取消</button>
+      <button class="modal-ok" onclick="saveCaseModal()">儲存案件</button>
+    </div>
+  </div>
+</div>
+
+<!-- SALES MODAL -->
+<div class="modal-bg" id="sales-modal">
+  <div class="modal-box" style="width:420px">
+    <h3 id="sm-title">＋ 新增業務</h3>
+    <div class="mg"><label>姓名 *</label><input id="sm-name" placeholder="例：陳大明"/></div>
+    <div class="mg"><label>分機 / 手機</label><input id="sm-phone" placeholder="例：0912-345-678"/></div>
+    <div class="mg"><label>Email</label><input id="sm-email" placeholder="例：david@company.com"/></div>
+    <div class="mg"><label>負責區域</label><input id="sm-region" placeholder="例：北區、中部"/></div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('sales')">取消</button>
+      <button class="modal-ok" onclick="saveSalesModal()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+// ── 業務人員 ──────────────────────────────────────────────────
+// 從案件資料中整理出的業務：簡先生、Kelly、Amber、俊良、小朱、Terry、Jerry
+let salespeople = [
+  {id:1,  name:"簡先生", phone:"", email:"", region:"新竹"},
+  {id:2,  name:"Kelly",  phone:"", email:"", region:"新竹"},
+  {id:3,  name:"Amber",  phone:"", email:"", region:"台中"},
+  {id:4,  name:"俊良",   phone:"", email:"", region:"台南"},
+  {id:5,  name:"小朱",   phone:"", email:"", region:"桃園"},
+  {id:6,  name:"Terry",  phone:"", email:"", region:"台中"},
+  {id:7,  name:"Jerry",  phone:"", email:"", region:"台北"},
+];
+
+// ── 經銷商與案件 ──────────────────────────────────────────────
+// 整理來源：
+//  4月：冠禮20萬(6/20,統睿)、奧鹿88萬(5/5,嘉南電腦-簡先生)
+//  5月🔥：宜特89萬(7/25,力仁資科)、永德90萬(6/25,精誠軟體-Kelly)、
+//          台中警60萬(5/25,協志科技-Amber)、銳澤14萬(5/25,統睿)、
+//          大台中數位6萬(統睿)、鈦昇60萬(6/15,統睿)  小計278萬
+//  6月：宇川52萬(6/25,敦陽科技-俊良)、關東80萬(8/25,大綜電腦-小朱)、
+//       PMC50萬(7/25,精誠資訊-Terry)、伯特10萬(6/25,統睿)
+//  7月：洋基工程180萬(8/25,逸凡科技-Jerry)、Ma維護53萬(9/25)
+let dealers = [
+
+  // ─── 統睿科技（新竹，多個案件） ───────────────────────────
+  {id:10, name:"統睿科技", city:"新竹市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"", phone:"", salesIds:[],
+   cases:[
+     {id:1001, name:"冠禮",     salesId:0, status:"報價中", est:200000,  actual:0, date:"2025/06/20", note:"4月 · 預計6/20交單", items:[]},
+     {id:1002, name:"銳澤",     salesId:0, status:"報價中", est:140000,  actual:0, date:"2025/05/25", note:"5月重點🔥 · 預計5/25", items:[]},
+     {id:1003, name:"大台中數位",salesId:0, status:"報價中", est:60000,   actual:0, date:"",           note:"5月重點🔥",             items:[]},
+     {id:1004, name:"鈦昇",     salesId:0, status:"報價中", est:600000,  actual:0, date:"2025/06/15", note:"5月重點🔥 · 預計6/15", items:[]},
+     {id:1005, name:"伯特",     salesId:0, status:"報價中", est:100000,  actual:0, date:"2025/06/25", note:"6月 · 預計6/25",       items:[]},
+   ]},
+
+  // ─── 嘉南電腦（新竹，簡先生） ────────────────────────────
+  {id:11, name:"嘉南電腦", city:"新竹市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"簡先生", phone:"", salesIds:[1],
+   cases:[
+     {id:1101, name:"奧鹿", salesId:1, status:"報價中", est:880000, actual:0, date:"2025/05/05", note:"4月 · 預計5/5", items:[]},
+   ]},
+
+  // ─── 力仁資科（台北） ────────────────────────────────────
+  {id:12, name:"力仁資科", city:"台北市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"", phone:"", salesIds:[],
+   cases:[
+     {id:1201, name:"宜特", salesId:0, status:"報價中", est:890000, actual:0, date:"2025/07/25", note:"5月重點🔥 · 預計7/25", items:[]},
+   ]},
+
+  // ─── 精誠軟體（新竹，Kelly） ──────────────────────────────
+  {id:13, name:"精誠軟體", city:"新竹市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"Kelly", phone:"", salesIds:[2],
+   cases:[
+     {id:1301, name:"永德", salesId:2, status:"報價中", est:900000, actual:0, date:"2025/06/25", note:"5月重點🔥 · 預計6/25", items:[]},
+   ]},
+
+  // ─── 協志科技（台中，Amber） ──────────────────────────────
+  {id:14, name:"協志科技", city:"台中市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"Amber", phone:"", salesIds:[3],
+   cases:[
+     {id:1401, name:"台中警", salesId:3, status:"報價中", est:600000, actual:0, date:"2025/05/25", note:"5月重點🔥 · 預計5/25", items:[]},
+   ]},
+
+  // ─── 敦陽科技（台南，俊良） ──────────────────────────────
+  {id:15, name:"敦陽科技", city:"台南市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"俊良", phone:"", salesIds:[4],
+   cases:[
+     {id:1501, name:"宇川", salesId:4, status:"報價中", est:520000, actual:0, date:"2025/06/25", note:"6月 · 預計6/25", items:[]},
+   ]},
+
+  // ─── 大綜電腦（桃園，小朱） ──────────────────────────────
+  {id:16, name:"大綜電腦", city:"桃園市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"小朱", phone:"", salesIds:[5],
+   cases:[
+     {id:1601, name:"關東", salesId:5, status:"報價中", est:800000, actual:0, date:"2025/08/25", note:"6月 · 預計8/25", items:[]},
+   ]},
+
+  // ─── 精誠資訊（台中，Terry） ─────────────────────────────
+  {id:17, name:"精誠資訊", city:"台中市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"Terry", phone:"", salesIds:[6],
+   cases:[
+     {id:1701, name:"PMC", salesId:6, status:"報價中", est:500000, actual:0, date:"2025/07/25", note:"6月 · 預計7/25", items:[]},
+   ]},
+
+  // ─── 逸凡科技（台北，Jerry） ─────────────────────────────
+  {id:18, name:"逸凡科技", city:"台北市", status:"合作中",
+   monthly:0, orders:0, joined:"2025/01/01", contact:"Jerry", phone:"", salesIds:[7],
+   cases:[
+     {id:1801, name:"洋基工程",  salesId:7, status:"報價中", est:1800000, actual:0, date:"2025/08/25", note:"7月 · 預計8/25 ⭐大案",  items:[]},
+     {id:1802, name:"Ma 維護",   salesId:7, status:"報價中", est:530000,  actual:0, date:"2025/09/25", note:"7月 · 預計9/25",          items:[]},
+   ]},
+
+];
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let currentPage='map', prevPage='dealers';
+let detailId=null, editingDealerId=null, editingCaseId=null, editingSalesId=null;
+let dFilter='全部', dSort={col:'monthly',dir:'desc'};
+let caseGSort={col:'est',dir:'desc'}, caseGFilter='全部';
+let activeTab='cases';
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+const SC={'合作中':'b-green','洽談中':'b-blue','待開發':'b-amber','已結束':'b-gray'};
+const CC={'詢價中':'b-blue','報價中':'b-purple','議價中':'b-amber','已成交':'b-green','未成交':'b-red','暫緩':'b-gray'};
+const SCOL={'合作中':'#16a34a','洽談中':'#2563eb','待開發':'#d97706','已結束':'#94a3b8'};
+
+function fmt(n){if(!n||n===0)return'—';if(n>=1e8)return(n/1e8).toFixed(1)+'億';if(n>=1e4)return(n/1e4).toFixed(1)+'萬';return n.toLocaleString();}
+function fmtN(n){return n>0?n.toLocaleString()+' 元':'—';}
+function badge(s,map){const m=map||SC;return`<span class="badge ${m[s]||'b-gray'}">${s}</span>`;}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function salesName(id){const s=salespeople.find(x=>x.id===id);return s?s.name:'—';}
+function dealerSalesNames(d){return(d.salesIds||[]).map(id=>salesName(id)).filter(Boolean).join('、')||'—';}
+function dealerCases(id){return(dealers.find(d=>d.id===id)||{}).cases||[];}
+function caseEst(id){return dealerCases(id).reduce((a,c)=>a+c.est,0);}
+function allCases(){return dealers.flatMap(d=>(d.cases||[]).map(c=>({...c,dealerName:d.name,dealerId:d.id})));}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDashboard(){
+  const total=dealers.length, active=dealers.filter(d=>d.status==='合作中').length;
+  const rev=dealers.reduce((a,d)=>a+d.monthly,0);
+  const ac=allCases(), est=ac.reduce((a,c)=>a+c.est,0);
+  document.getElementById('dash-kpi').innerHTML=[
+    {l:'總經銷商',v:total+'家',c:'#2563eb',i:'🏢'},
+    {l:'合作中',v:active+'家',c:'#16a34a',i:'✅'},
+    {l:'本月業績',v:fmt(rev)+'元',c:'#d97706',i:'💰'},
+    {l:'總案件數',v:ac.length+'件',c:'#7c3aed',i:'📋'},
+    {l:'案件預計總額',v:fmt(est)+'元',c:'#0f766e',i:'💎'},
+  ].map(k=>`<div class="kcard" style="border-top-color:${k.c}"><div style="font-size:18px">${k.i}</div><div class="kcard-val">${k.v}</div><div class="kcard-lbl">${k.l}</div></div>`).join('');
+
+  document.getElementById('dash-rank').innerHTML=[...dealers].filter(d=>d.monthly>0).sort((a,b)=>b.monthly-a.monthly).slice(0,5).map((d,i)=>`
+    <div style="display:flex;align-items:center;gap:9px;padding:6px 8px;border-radius:8px;cursor:pointer;margin-bottom:4px" onclick="detailId=${d.id};goto('detail')"
+      onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <div style="width:24px;height:24px;border-radius:6px;background:${i===0?'linear-gradient(135deg,#f59e0b,#d97706)':i===1?'linear-gradient(135deg,#94a3b8,#64748b)':i===2?'linear-gradient(135deg,#c08050,#a06030)':'#f1f5f9'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:${i<3?'#fff':'#94a3b8'};flex-shrink:0">${i+1}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.name}</div><div style="font-size:11px;color:#94a3b8">${d.city} · ${dealerSalesNames(d)}</div></div>
+      <div style="font-size:13px;font-weight:800;color:#0f172a;flex-shrink:0">${fmt(d.monthly)}</div>
+    </div>`).join('');
+
+  const recent=[...allCases()].sort((a,b)=>b.id-a.id).slice(0,5);
+  document.getElementById('dash-recent-cases').innerHTML=recent.map(c=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">
+      ${badge(c.status,CC)}
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</div><div style="font-size:11px;color:#94a3b8">${c.dealerName}</div></div>
+      <div style="font-size:12px;font-weight:700;color:#7c3aed;flex-shrink:0">${fmt(c.est)}</div>
+    </div>`).join('');
+
+  const SM={'合作中':'#16a34a','洽談中':'#2563eb','待開發':'#d97706','已結束':'#94a3b8'};
+  document.getElementById('dash-status').innerHTML=Object.entries(SM).map(([s,c])=>{
+    const cnt=dealers.filter(d=>d.status===s).length,pct=Math.round(cnt/total*100);
+    return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${s}</span><span style="color:#94a3b8">${cnt}家 ${pct}%</span></div><div style="background:#f1f5f9;border-radius:4px;height:7px"><div style="height:100%;border-radius:4px;background:${c};width:${pct}%"></div></div></div>`;
+  }).join('');
+
+  document.getElementById('dash-dealers').innerHTML=[...dealers].sort((a,b)=>new Date(b.joined)-new Date(a.joined)).slice(0,5).map(d=>`
+    <tr onclick="detailId=${d.id};goto('detail')" style="cursor:pointer">
+      <td class="td-bold">${d.name}</td><td style="color:#64748b">${d.city}</td>
+      <td>${badge(d.status)}</td>
+      <td style="font-weight:700;color:${d.monthly>0?'#0f172a':'#cbd5e1'}">${d.monthly>0?fmt(d.monthly)+' 元':'—'}</td>
+      <td style="color:#64748b">${dealerCases(d.id).length}件</td>
+      <td style="color:#7c3aed;font-weight:700">${caseEst(d.id)>0?fmt(caseEst(d.id))+' 元':'—'}</td>
+      <td style="color:#64748b;font-size:12px">${dealerSalesNames(d)}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// 台灣真實地圖 SVG — 從 GADM / TWN GeoJSON 人工校對
+// viewBox="0 0 800 900"
+// 座標系：lng 119.3~122.1 → x 20~440, lat 21.9~25.4 → y 20~530
+// ═══════════════════════════════════════════════
+// [city, path-d, labelX, labelY]
+const TW_REGIONS=[
+  ['澎湖縣','M59,400L133,382L155,433L120,493L59,475L40,433Z',99,433],
+  ['台東縣','M453,488L493,600L507,683L475,792L379,863L493,863L608,837L653,792L680,683L699,550L699,393L661,332L592,318L555,337L512,433L493,542L520,632Z',590,570],
+  ['花蓮縣','M555,337L592,318L661,332L699,393L699,550L680,683L653,792L608,837L493,863L493,738L459,632L493,542L512,433L547,350Z',645,510],
+  ['屏東縣','M307,700L379,863L440,888L360,888L272,837L208,757L181,708L187,683L235,688L261,757L325,733L387,632Z',340,812],
+  ['高雄市','M187,683L181,488L208,483L227,438L261,443L307,475L341,425L379,407L448,600L459,733L387,632L325,733L261,757L235,688L208,600L181,525Z',285,600],
+  ['台南市','M165,593L208,483L181,488L181,525L208,600L235,688L187,683L160,632Z',190,575],
+  ['嘉義縣','M181,407L192,433L200,558L245,575L288,542L307,475L261,443L227,438L208,483L165,593L200,475L181,493Z',228,487],
+  ['雲林縣','M219,375L261,382L307,382L333,362L307,425L288,542L245,575L200,558L192,433L181,407Z',248,432],
+  ['南投縣','M333,362L360,282L405,250L448,287L501,282L512,337L547,350L512,433L467,493L379,407L341,425L307,382Z',432,368],
+  ['彰化縣','M219,318L245,282L288,237L315,212L307,308L333,362L307,382L261,382L227,350Z',268,328],
+  ['台中市','M288,237L315,212L333,257L360,282L333,362L307,308L307,225Z',318,278],
+  ['苗栗縣','M333,257L360,282L405,250L448,287L501,282L480,343L432,375L405,382L379,375L352,332L325,300Z',410,318],
+  ['宜蘭縣','M600,167L635,143L672,117L715,132L741,183L747,112L707,67L661,93L629,263L661,332L699,393L699,257L741,183Z',693,193],
+  ['桃園市','M421,143L445,132L507,132L560,138L600,167L592,225L533,257L480,282L448,287L405,250L360,282L333,257L325,207L352,175L379,132Z',477,192],
+  ['新竹縣','M448,143L507,132L560,138L600,167L592,225L533,257L480,282L448,287L405,250L421,225L448,183Z',507,213],
+  ['新北市','M421,143L379,132L352,175L325,207L333,257L315,212L288,237L307,225L307,132L443,87L501,77L597,87L597,115L624,127L656,120L661,90L640,58L603,65L661,42L715,67L747,82L741,183L715,132L672,117L635,143L600,167L560,138L507,132L445,132Z',540,80],
+  ['新竹市','M448,143L472,143L480,167L467,183L448,172Z',468,160],
+  ['嘉義市','M315,483L347,475L352,502L325,513L309,500Z',333,493],
+  ['台北市','M603,65L640,58L661,90L656,120L624,127L597,115L597,87Z',630,97],
+  ['基隆市','M672,87L707,67L744,82L747,108L715,115L675,112Z',713,92],
+];
+
+function getCityFill(city){
+  const ds=dealers.filter(d=>d.city===city);
+  if(!ds.length) return {bg:'#cce4f0',stroke:'#99c4d8'};
+  const est=ds.reduce((a,d)=>a+caseEst(d.id),0);
+  if(ds.some(d=>d.status==='合作中')){
+    if(est>=2000000) return {bg:'#16a34a',stroke:'#15803d'};
+    if(est>=500000)  return {bg:'#4ade80',stroke:'#16a34a'};
+    return {bg:'#bbf7d0',stroke:'#4ade80'};
+  }
+  if(ds.some(d=>d.status==='洽談中')) return {bg:'#93c5fd',stroke:'#3b82f6'};
+  return {bg:'#fde68a',stroke:'#f59e0b'};
+}
+
+let mapSelectedCity=null;
+
+function renderMap(){
+  const svg=document.getElementById('tw-map');
+  const cityMap={};
+  dealers.forEach(d=>{if(!cityMap[d.city])cityMap[d.city]=[];cityMap[d.city].push(d);});
+  const cityEstMap={};
+  dealers.forEach(d=>{cityEstMap[d.city]=(cityEstMap[d.city]||0)+caseEst(d.id);});
+
+  let html=`<defs>
+    <filter id="dropshadow">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#1e3a5f" flood-opacity="0.15"/>
+    </filter>
+    <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#cde8f8"/>
+      <stop offset="100%" stop-color="#daf0fb"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="900" fill="url(#seaGrad)" rx="14"/>`;
+
+  // Wave lines for sea feel
+  for(let y=30;y<900;y+=25)
+    html+=`<path d="M10,${y} Q125,${y-5} 400,${y} Q600,${y+5} 790,${y}" fill="none" stroke="#b8ddf0" stroke-width="0.5" opacity="0.5"/>`;
+
+  // Draw all regions
+  TW_REGIONS.forEach(([city,path,lx,ly])=>{
+    const{bg,stroke}=getCityFill(city);
+    const ds=cityMap[city]||[];
+    const hasDealers=ds.length>0;
+    const isSelected=mapSelectedCity===city;
+    const sw=isSelected?2.5:1;
+    const sc=isSelected?'#1e3a5f':stroke;
+    html+=`<g class="city-group" data-city="${city}">
+      <path class="city-path" d="${path}"
+        fill="${bg}" stroke="${sc}" stroke-width="${sw}" stroke-linejoin="round"
+        filter="url(#dropshadow)"
+        style="cursor:${hasDealers?'pointer':'default'};transition:fill .2s,stroke .2s"
+        data-city="${city}"/>`;
+
+    // Label — font size depends on city importance
+    const important=['台北市','新北市','台中市','高雄市','台南市','桃園市','花蓮縣','台東縣'].includes(city);
+    const tiny=['嘉義市','基隆市','新竹市'].includes(city);
+    const fs = tiny?10:important?14:12;
+    html+=`<text x="${lx}" y="${ly}" text-anchor="middle"
+      font-size="${fs}" fill="${hasDealers?'#0f172a':'#4a7a95'}"
+      font-weight="${hasDealers?800:400}"
+      style="pointer-events:none;user-select:none;
+             text-shadow:1px 1px 0 rgba(255,255,255,0.9),-1px -1px 0 rgba(255,255,255,0.9),
+                         1px -1px 0 rgba(255,255,255,0.9),-1px 1px 0 rgba(255,255,255,0.9)"
+      >${city}</text>`;
+
+    // Dealer count bubble
+    if(hasDealers){
+      const bubbleColor=SCOL[ds.find(d=>d.status==='合作中')?.status||ds[0].status]||'#64748b';
+      html+=`<circle cx="${lx}" cy="${ly-22}" r="18"
+        fill="${bubbleColor}" stroke="white" stroke-width="3"
+        style="pointer-events:none;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.3))"/>
+      <text x="${lx}" y="${ly-16}" text-anchor="middle" font-size="14"
+        fill="white" font-weight="900"
+        style="pointer-events:none;user-select:none">${ds.length}</text>`;
+    }
+    html+=`</g>`;
+  });
+
+  // Legend bottom-left
+  html+=`<g transform="translate(8,858)">
+    <rect width="200" height="30" rx="6" fill="white" fill-opacity="0.9" stroke="#dde" stroke-width="0.5"/>
+    ${[['#16a34a','合作(大)'],['#bbf7d0','合作中'],['#93c5fd','洽談中'],['#fde68a','待開發'],['#cce4f0','未設定']].map(([c,l],i)=>
+      `<rect x="${6+i*39}" y="8" width="8" height="8" rx="2" fill="${c}" stroke="#ccc" stroke-width="0.5"/>
+       <text x="${16+i*39}" y="16" font-size="6" fill="#475569">${l}</text>`).join('')}
+  </g>`;
+
+  svg.innerHTML=html;
+
+  // ── Hover tooltip ──
+  const tooltip=document.getElementById('map-tooltip');
+  document.querySelectorAll('.city-path').forEach(el=>{
+    el.addEventListener('mouseenter',function(){
+      const city=this.dataset.city;
+      const ds=cityMap[city]||[];
+      if(!ds.length){tooltip.style.display='none';return;}
+      const est=cityEstMap[city]||0;
+      let h=`<div style="font-weight:700;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.2);padding-bottom:6px;margin-bottom:7px">📍 ${city}</div>`;
+      h+=`<div style="font-size:11px;color:#c4b5fd;margin-bottom:8px;font-weight:600">${ds.length}家經銷商 · 合計預計 ${fmt(est)} 元</div>`;
+      ds.forEach(d=>{
+        const dot={合作中:'#4ade80',洽談中:'#60a5fa',待開發:'#fbbf24',已結束:'#94a3b8'}[d.status]||'#888';
+        const dc=dealerCases(d.id);
+        h+=`<div style="background:rgba(255,255,255,0.1);border-radius:7px;padding:6px 8px;margin-bottom:5px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:${dc.length?4:0}px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:700">${d.name}</span>
+            ${caseEst(d.id)>0?`<span style="margin-left:auto;font-size:11px;color:#c4b5fd;font-weight:700">${fmt(caseEst(d.id))}</span>`:''}
+          </div>
+          ${dc.slice(0,4).map(c=>`
+            <div style="display:flex;justify-content:space-between;align-items:center;font-size:10.5px;padding:1px 0 1px 14px">
+              <span style="color:#d1d5db">・${c.name}</span>
+              <span style="color:#a78bfa;font-weight:600">${fmt(c.est)}</span>
+            </div>`).join('')}
+          ${dc.length>4?`<div style="font-size:10px;color:#6b7280;padding-left:14px">…還有 ${dc.length-4} 件</div>`:''}
+        </div>`;
+      });
+      h+=`<div style="font-size:10px;color:#9ca3af;text-align:center;margin-top:4px;border-top:1px solid rgba(255,255,255,0.1);padding-top:5px">點擊縣市展開詳情</div>`;
+      tooltip.innerHTML=h;
+      tooltip.style.display='block';
+      const wrap=document.getElementById('svg-map-wrap').getBoundingClientRect();
+      const er=el.getBoundingClientRect();
+      const TW=230;
+      let left=er.left-wrap.left+er.width/2-TW/2;
+      let top=er.top-wrap.top-tooltip.offsetHeight-12;
+      if(top<4) top=er.top-wrap.top+er.height+8;
+      left=Math.max(4,Math.min(left,wrap.width-TW-4));
+      tooltip.style.left=left+'px'; tooltip.style.top=top+'px';
+    });
+    el.addEventListener('mouseleave',()=>{tooltip.style.display='none';});
+    el.addEventListener('click',function(){
+      const city=this.dataset.city;
+      const ds=cityMap[city]||[];
+      if(!ds.length) return;
+      mapSelectedCity=(mapSelectedCity===city)?null:city;
+      renderMap();
+      if(mapSelectedCity) showCityPanel(city,ds);
+      else document.getElementById('map-city-panel').innerHTML='';
+    });
+  });
+
+  renderTop3();
+  renderCityStats();
+}
+
+// ── 點擊縣市後右側展開 ──────────────────────────────────────
+function showCityPanel(city, ds){
+  const cityEstMap={};
+  dealers.forEach(d=>{cityEstMap[d.city]=(cityEstMap[d.city]||0)+caseEst(d.id);});
+  const totalEst=cityEstMap[city]||0;
+
+  let html=`<div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 2px 12px rgba(0,0,0,0.1);border:2px solid #2563eb;margin-bottom:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:15px;font-weight:800">📍 ${city}</div>
+        <div style="font-size:12px;color:#94a3b8">${ds.length}家經銷商 · 預計 <span style="color:#7c3aed;font-weight:700">${fmt(totalEst)} 元</span></div>
+      </div>
+      <button onclick="mapSelectedCity=null;renderMap();document.getElementById('map-city-panel').innerHTML=''"
+        style="background:#f1f5f9;border:none;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:13px;color:#64748b">✕</button>
+    </div>`;
+
+  ds.forEach(d=>{
+    const cases=dealerCases(d.id);
+    const est=caseEst(d.id);
+    const sid='dp-'+d.id;
+    html+=`<div style="background:#f8fafc;border-radius:10px;margin-bottom:10px;overflow:hidden;border:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer"
+        onclick="toggleDealerPanel('${sid}')" id="${sid}-hd">
+        <span style="width:8px;height:8px;border-radius:50%;background:${SCOL[d.status]||'#888'};display:inline-block;flex-shrink:0"></span>
+        <span style="font-size:13px;font-weight:700;flex:1">${d.name}</span>
+        <span style="font-size:12px;color:#7c3aed;font-weight:700">${est>0?fmt(est)+' 元':'—'}</span>
+        <span style="font-size:12px;color:#94a3b8">${cases.length}件</span>
+        <span id="${sid}-arrow" style="font-size:12px;color:#94a3b8;transition:transform .2s">▸</span>
+      </div>
+      <div id="${sid}" style="display:none;border-top:1px solid #f1f5f9">
+        ${cases.length===0
+          ?`<div style="padding:10px 14px;font-size:12px;color:#cbd5e1">尚無案件</div>`
+          :cases.map(c=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #f9fafb;cursor:pointer"
+            onclick="detailId=${d.id};goto('detail')"
+            onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+            <span class="badge ${CC[c.status]||'b-gray'}" style="font-size:10px;padding:1px 6px">${c.status}</span>
+            <span style="flex:1;font-size:12px;font-weight:600;color:#1e293b">${c.name}</span>
+            <span style="font-size:12px;font-weight:700;color:#7c3aed;flex-shrink:0">${c.est>0?fmt(c.est)+' 元':'—'}</span>
+            ${c.date?`<span style="font-size:11px;color:#94a3b8;flex-shrink:0">${c.date}</span>`:''}
+          </div>`).join('')}
+        <div style="padding:8px 14px">
+          <button class="btn btn-primary btn-sm" onclick="detailId=${d.id};goto('detail')" style="width:100%">查看完整資料 →</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html+=`</div>`;
+  document.getElementById('map-city-panel').innerHTML=html;
+}
+
+function toggleDealerPanel(sid){
+  const el=document.getElementById(sid);
+  const arrow=document.getElementById(sid+'-arrow');
+  const open=el.style.display==='none';
+  el.style.display=open?'block':'none';
+  arrow.style.transform=open?'rotate(90deg)':'';
+}
+
+function renderTop3(){
+  const cityEst={};
+  const cityDealers={};
+  dealers.forEach(d=>{
+    cityEst[d.city]=(cityEst[d.city]||0)+caseEst(d.id);
+    if(!cityDealers[d.city])cityDealers[d.city]=[];
+    cityDealers[d.city].push(d);
+  });
+  const top3=Object.entries(cityEst).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  const medals=['🥇','🥈','🥉'];
+  const colors=['#f59e0b','#94a3b8','#c08050'];
+  document.getElementById('top3-panel').innerHTML=top3.map(([city,est],i)=>{
+    const ds=cityDealers[city]||[];
+    return`<div style="border-left:4px solid ${colors[i]};padding-left:12px;margin-bottom:16px">
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+        <span style="font-size:18px">${medals[i]}</span>
+        <span style="font-size:15px;font-weight:800">${city}</span>
+        <span style="font-size:13px;font-weight:700;color:#7c3aed">${fmt(est)} 元</span>
+      </div>
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:7px">${ds.length} 家經銷商</div>
+      ${ds.map(d=>{
+        const cases=dealerCases(d.id);
+        const sid='t3-'+d.id;
+        return`<div style="background:#f8fafc;border-radius:9px;margin-bottom:6px;overflow:hidden;border:1px solid #f1f5f9">
+          <div style="display:flex;align-items:center;gap:7px;padding:7px 10px;cursor:pointer" onclick="toggleDealerPanel('${sid}')">
+            <span style="width:7px;height:7px;border-radius:50%;background:${SCOL[d.status]};display:inline-block;flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:700;flex:1">${d.name}</span>
+            <span style="font-size:12px;color:#7c3aed;font-weight:700">${caseEst(d.id)>0?fmt(caseEst(d.id)):'—'}</span>
+            <span id="${sid}-arrow" style="font-size:11px;color:#94a3b8;transition:transform .2s">▸</span>
+          </div>
+          <div id="${sid}" style="display:none;border-top:1px solid #f1f5f9">
+            ${cases.map(c=>`<div style="display:flex;align-items:center;gap:7px;padding:6px 10px;border-bottom:1px solid #f9fafb;cursor:pointer"
+              onclick="detailId=${d.id};goto('detail')"
+              onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+              <span class="badge ${CC[c.status]||'b-gray'}" style="font-size:10px;padding:1px 6px">${c.status}</span>
+              <span style="flex:1;font-size:12px;color:#1e293b;font-weight:600">${c.name}</span>
+              <span style="font-size:12px;font-weight:700;color:#7c3aed">${fmt(c.est)}</span>
+            </div>`).join('')||`<div style="padding:8px 10px;font-size:12px;color:#cbd5e1">尚無案件</div>`}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderCityStats(){
+  const cityMap={};
+  dealers.forEach(d=>{if(!cityMap[d.city])cityMap[d.city]=[];cityMap[d.city].push(d);});
+  const rows=Object.entries(cityMap).sort((a,b)=>b[1].length-a[1].length);
+  const maxC=Math.max(...rows.map(([,ds])=>ds.length),1);
+  document.getElementById('city-stats').innerHTML=rows.map(([city,ds])=>{
+    const est=ds.reduce((a,d)=>a+caseEst(d.id),0);
+    return`<div style="margin-bottom:9px;cursor:pointer" onclick="highlightCity('${city}')">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px">
+        <span style="font-weight:600">${city}</span>
+        <span style="color:#94a3b8">${ds.length}家${est>0?' · '+fmt(est):''}</span>
+      </div>
+      <div style="background:#f1f5f9;border-radius:4px;height:6px"><div style="height:100%;border-radius:4px;background:linear-gradient(90deg,#2563eb,#60a5fa);width:${(ds.length/maxC)*100}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function highlightCity(city){
+  document.querySelectorAll('.city-path').forEach(el=>{
+    el.style.strokeWidth=el.dataset.city===city?'2.5':'0.8';
+    el.style.stroke=el.dataset.city===city?'#1e3a5f':'#9bc4d8';
+  });
+}
+
+// ═══════════════════════════════════════════════
+// DEALERS LIST
+// ═══════════════════════════════════════════════
+function renderDealers(){
+  const search=(document.getElementById('dealer-search')||{}).value||'';
+  let vis=dealers.filter(d=>(dFilter==='全部'||d.status===dFilter)&&
+    (d.name.includes(search)||d.city.includes(search)||dealerSalesNames(d).includes(search)||(d.contact||'').includes(search)));
+  vis=[...vis].sort((a,b)=>{
+    const v=dSort.dir==='asc'?1:-1;
+    if(dSort.col==='monthly') return(a.monthly-b.monthly)*v;
+    if(dSort.col==='cases')   return(dealerCases(a.id).length-dealerCases(b.id).length)*v;
+    if(dSort.col==='name')    return a.name.localeCompare(b.name)*v;
+    return 0;
+  });
+  document.getElementById('dealer-filter-btns').innerHTML=['全部','合作中','洽談中','待開發','已結束'].map(s=>
+    `<button class="btn btn-sm btn-ghost" style="${dFilter===s?'background:#2563eb;color:#fff':''}" onclick="setDFilter('${s}')">${s}</button>`).join('');
+  document.getElementById('dealer-count').textContent='共 '+vis.length+' 家';
+  ['name','monthly','cases'].forEach(c=>{const el=document.getElementById('ds-'+c);if(el)el.textContent=dSort.col===c?(dSort.dir==='desc'?'↓':'↑'):'';});
+  document.getElementById('dealer-tbody').innerHTML=vis.map((d,i)=>`
+    <tr style="cursor:pointer" onclick="detailId=${d.id};goto('detail')">
+      <td style="color:#cbd5e1;font-size:11px">#${i+1}</td>
+      <td class="td-bold">${d.name}</td>
+      <td style="color:#64748b">${d.city}</td>
+      <td>${badge(d.status)}</td>
+      <td style="font-weight:700;color:${d.monthly>0?'#0f172a':'#cbd5e1'}">${d.monthly>0?fmt(d.monthly)+' 元':'—'}</td>
+      <td style="color:#64748b">${dealerCases(d.id).length}件</td>
+      <td style="color:#7c3aed;font-weight:700">${caseEst(d.id)>0?fmt(caseEst(d.id))+' 元':'—'}</td>
+      <td style="color:#64748b;font-size:12px">${dealerSalesNames(d)}</td>
+      <td style="color:#64748b;font-size:12px">${d.contact||'—'}</td>
+      <td onclick="event.stopPropagation()"><button class="view-btn" onclick="openDealerModal(${d.id})">編輯</button></td>
+    </tr>`).join('')||`<tr><td colspan="10" style="padding:32px;text-align:center;color:#cbd5e1">無符合資料</td></tr>`;
+}
+function setDFilter(f){dFilter=f;renderDealers();}
+function dealerSort(col){if(dSort.col===col)dSort.dir=dSort.dir==='asc'?'desc':'asc';else{dSort.col=col;dSort.dir='desc';}renderDealers();}
+
+// ═══════════════════════════════════════════════
+// CASES GLOBAL
+// ═══════════════════════════════════════════════
+function renderAllCases(){
+  const search=(document.getElementById('case-search')||{}).value||'';
+  let ac=allCases().filter(c=>(caseGFilter==='全部'||c.status===caseGFilter)&&
+    (c.name.includes(search)||c.dealerName.includes(search)||(c.items||[]).some(it=>it.includes(search))));
+  ac=[...ac].sort((a,b)=>{const v=caseGSort.dir==='asc'?1:-1;if(caseGSort.col==='est')return(a.est-b.est)*v;return 0;});
+  document.getElementById('case-status-btns').innerHTML=['全部','詢價中','報價中','議價中','已成交','未成交','暫緩'].map(s=>
+    `<button class="btn btn-sm btn-ghost" style="${caseGFilter===s?'background:#2563eb;color:#fff':''}" onclick="setCGFilter('${s}')">${s}</button>`).join('');
+  const estSum=ac.reduce((a,c)=>a+c.est,0);
+  document.getElementById('case-count').textContent=`共 ${ac.length} 件，預計 ${fmt(estSum)} 元`;
+  const el=document.getElementById('cgs-est');if(el)el.textContent=caseGSort.col==='est'?(caseGSort.dir==='desc'?'↓':'↑'):'';
+  document.getElementById('cases-tbody').innerHTML=ac.map(c=>`
+    <tr style="cursor:pointer" onclick="detailId=${c.dealerId};goto('detail')">
+      <td class="td-bold">${c.name}</td>
+      <td style="color:#64748b;font-size:12px">${c.dealerName}</td>
+      <td style="color:#64748b;font-size:12px">${salesName(c.salesId)}</td>
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">${(c.items||[]).map(it=>`<span class="item-pill">${it}</span>`).join('')||'—'}</div></td>
+      <td>${badge(c.status,CC)}</td>
+      <td style="font-weight:700;color:#7c3aed">${c.est>0?fmtN(c.est):'—'}</td>
+      <td style="font-weight:700;color:${c.actual>0?'#16a34a':'#cbd5e1'}">${c.actual>0?fmtN(c.actual):'—'}</td>
+      <td style="color:#94a3b8;font-size:12px">${c.date||'—'}</td>
+      <td onclick="event.stopPropagation()">
+        <button class="view-btn" onclick="editingDealerId=${c.dealerId};editingCaseId=${c.id};openCaseModalFor(${c.dealerId},${c.id})">編輯</button>
+      </td>
+    </tr>`).join('')||`<tr><td colspan="9" style="padding:32px;text-align:center;color:#cbd5e1">無符合案件</td></tr>`;
+}
+function setCGFilter(f){caseGFilter=f;renderAllCases();}
+function caseGlobalSort(col){if(caseGSort.col===col)caseGSort.dir=caseGSort.dir==='asc'?'desc':'asc';else{caseGSort.col=col;caseGSort.dir='desc';}renderAllCases();}
+
+// ═══════════════════════════════════════════════
+// SALESPERSON
+// ═══════════════════════════════════════════════
+function renderSales(){
+  document.getElementById('sales-grid').innerHTML=salespeople.map(s=>{
+    const myDealers=dealers.filter(d=>(d.salesIds||[]).includes(s.id));
+    const myCases=allCases().filter(c=>c.salesId===s.id);
+    const myEst=myCases.reduce((a,c)=>a+c.est,0);
+    const initials=s.name.slice(0,1);
+    return`<div class="panel">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+        <div class="sales-avatar">${initials}</div>
+        <div>
+          <div style="font-size:15px;font-weight:800">${s.name}</div>
+          <div style="font-size:11px;color:#94a3b8">${s.region||''} ${s.phone?'· '+s.phone:''}</div>
+          ${s.email?`<div style="font-size:11px;color:#2563eb">${s.email}</div>`:''}
+        </div>
+        <div style="margin-left:auto;display:flex;gap:5px">
+          <button class="view-btn" onclick="openSalesModal(${s.id})">編輯</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteSales(${s.id})">刪</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px">
+        ${[['負責經銷商',myDealers.length+'家'],['負責案件',myCases.length+'件'],['案件預計',fmt(myEst)+'元']].map(([l,v])=>`
+        <div style="background:#f8fafc;border-radius:8px;padding:9px;text-align:center">
+          <div style="font-size:16px;font-weight:800;color:#0f172a">${v}</div>
+          <div style="font-size:10px;color:#94a3b8">${l}</div>
+        </div>`).join('')}
+      </div>
+      <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">負責案件</div>
+      ${myCases.slice(0,4).map(c=>`
+        <div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid #f8fafc;cursor:pointer" onclick="detailId=${c.dealerId};goto('detail')">
+          ${badge(c.status,CC)}
+          <span style="flex:1;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.name}</span>
+          <span style="font-size:12px;color:#7c3aed;font-weight:700;flex-shrink:0">${fmt(c.est)}</span>
+        </div>`).join('')}
+      ${myCases.length===0?'<div style="color:#cbd5e1;font-size:12px;padding:4px 0">尚無負責案件</div>':''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// DETAIL PAGE
+// ═══════════════════════════════════════════════
+function renderDetail(){
+  const d=dealers.find(x=>x.id===detailId);if(!d)return;
+  const salesNames=(d.salesIds||[]).map(id=>{const s=salespeople.find(x=>x.id===id);return s?s.name:'';}).filter(Boolean);
+  document.getElementById('d-info-card').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <div style="font-size:22px;font-weight:900">${d.name}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:5px;display:flex;gap:14px;flex-wrap:wrap">
+          <span>📍 ${d.city}</span>
+          <span>📅 ${d.joined}</span>
+          ${d.contact?`<span>👤 ${d.contact}</span>`:''}
+          ${d.phone?`<span>📞 ${d.phone}</span>`:''}
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          ${badge(d.status)}
+          ${salesNames.map(n=>`<span class="badge b-purple">👤 ${n}</span>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openDealerModal(${d.id})">✏️ 編輯</button>
+        <button class="btn btn-green" onclick="editingDealerId=${d.id};editingCaseId=null;openCaseModalFor(${d.id},null)">＋ 新增案件</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteDealer()">🗑 刪除</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      ${[
+        ['本月業績', d.monthly>0?fmt(d.monthly)+' 元':'—'],
+        ['本月訂單', d.orders>0?d.orders+' 筆':'—'],
+        ['案件總數', dealerCases(detailId).length+' 件'],
+        ['預計總金額', caseEst(detailId)>0?fmt(caseEst(detailId))+' 元':'—'],
+      ].map(([l,v])=>`<div style="background:#f8fafc;border-radius:9px;padding:13px 14px;border:1px solid #f1f5f9"><div style="font-size:11px;color:#94a3b8">${l}</div><div style="font-size:18px;font-weight:900;margin-top:3px">${v}</div></div>`).join('')}
+    </div>`;
+
+  renderDetailCases();
+  renderDetailSales();
+  renderDetailRight();
+}
+
+function switchTab(tab){
+  activeTab=tab;
+  ['cases','salespeople'].forEach(t=>{
+    document.getElementById('tab-'+t).classList.toggle('active',t===tab);
+    document.getElementById('tab-content-'+t).style.display=t===tab?'block':'none';
+  });
+}
+
+function renderDetailCases(){
+  const d=dealers.find(x=>x.id===detailId);if(!d)return;
+  const cases=d.cases||[];
+  const estSum=cases.reduce((a,c)=>a+c.est,0);
+  const actualSum=cases.filter(c=>c.actual>0).reduce((a,c)=>a+c.actual,0);
+  document.getElementById('tab-content-cases').innerHTML=`
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1;background:#f8fafc;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:15px;font-weight:800;color:#7c3aed">${fmt(estSum)} 元</div>
+        <div style="font-size:11px;color:#94a3b8">預計總金額</div>
+      </div>
+      <div style="flex:1;background:#f8fafc;border-radius:8px;padding:10px 12px;text-align:center">
+        <div style="font-size:15px;font-weight:800;color:#16a34a">${fmt(actualSum)} 元</div>
+        <div style="font-size:11px;color:#94a3b8">實際成交</div>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table><thead><tr><th>案件名稱</th><th>負責業務</th><th>品項</th><th>狀態</th><th>預計金額</th><th>實際金額</th><th>日期</th><th>操作</th></tr></thead>
+      <tbody>${cases.length===0?`<tr><td colspan="8" style="padding:24px;text-align:center;color:#cbd5e1">尚無案件</td></tr>`:
+        cases.map(c=>`<tr>
+          <td><div style="font-weight:700">${c.name}</div>${c.note?`<div style="font-size:11px;color:#94a3b8">${c.note}</div>`:''}</td>
+          <td style="font-size:12px;color:#64748b">${salesName(c.salesId)}</td>
+          <td><div style="display:flex;gap:3px;flex-wrap:wrap;max-width:160px">${(c.items||[]).map(it=>`<span class="item-pill">${it}</span>`).join('')||'—'}</div></td>
+          <td>${badge(c.status,CC)}</td>
+          <td style="font-weight:700;color:#7c3aed">${c.est>0?fmtN(c.est):'—'}</td>
+          <td style="font-weight:700;color:${c.actual>0?'#16a34a':'#cbd5e1'}">${c.actual>0?fmtN(c.actual):'—'}</td>
+          <td style="font-size:12px;color:#94a3b8">${c.date||'—'}</td>
+          <td>
+            <div style="display:flex;gap:4px">
+              <button class="view-btn" onclick="openCaseModalFor(${detailId},${c.id})">編輯</button>
+              <button style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:11px" onclick="deleteCase(${c.id})">刪</button>
+            </div>
+          </td>
+        </tr>`).join('')}
+      </tbody></table>
+    </div>`;
+}
+
+function renderDetailSales(){
+  const d=dealers.find(x=>x.id===detailId);if(!d)return;
+  const myS=salespeople.filter(s=>(d.salesIds||[]).includes(s.id));
+  document.getElementById('tab-content-salespeople').innerHTML=myS.length===0
+    ?`<div style="color:#cbd5e1;font-size:13px;padding:10px 0">尚未指派業務人員</div>`
+    :myS.map(s=>{
+      const myCases=(d.cases||[]).filter(c=>c.salesId===s.id);
+      const myEst=myCases.reduce((a,c)=>a+c.est,0);
+      return`<div class="sales-card">
+        <div class="sales-avatar">${s.name.slice(0,1)}</div>
+        <div class="sales-info">
+          <div class="sales-name">${s.name}</div>
+          <div class="sales-meta">${s.region||''} ${s.phone?'· '+s.phone:''}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">負責 ${myCases.length} 件 · 預計 ${fmt(myEst)} 元</div>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;text-align:right">${myCases.map(c=>`<div style="margin-bottom:2px">${badge(c.status,CC)} ${c.name.length>8?c.name.slice(0,8)+'…':c.name}</div>`).join('')}</div>
+      </div>`;
+    }).join('');
+}
+
+function renderDetailRight(){
+  const d=dealers.find(x=>x.id===detailId);if(!d)return;
+  // Case status breakdown
+  const cases=d.cases||[];
+  const CS={'詢價中':'#2563eb','報價中':'#7c3aed','議價中':'#d97706','已成交':'#16a34a','未成交':'#dc2626','暫緩':'#94a3b8'};
+  const siblings=dealers.filter(x=>x.city===d.city&&x.id!==d.id);
+  document.getElementById('d-right').innerHTML=`
+    <div class="panel">
+      <div class="panel-title">案件狀態統計</div>
+      ${Object.entries(CS).map(([s,c])=>{const cnt=cases.filter(x=>x.status===s).length;if(!cnt)return'';const est=cases.filter(x=>x.status===s).reduce((a,x)=>a+x.est,0);
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f8fafc;font-size:12px"><span style="display:flex;align-items:center;gap:5px"><span style="width:7px;height:7px;border-radius:50%;background:${c};display:inline-block"></span>${s}</span><span style="color:#94a3b8">${cnt}件${est>0?' · '+fmt(est):''}</span></div>`;
+      }).join('')||'<div style="color:#cbd5e1;font-size:12px">尚無案件</div>'}
+    </div>
+    <div class="panel">
+      <div class="panel-title">同縣市經銷商</div>
+      ${siblings.length===0?'<div style="color:#cbd5e1;font-size:12px">此縣市無其他經銷商</div>':
+        siblings.map(s=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 9px;background:#f8fafc;border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="detailId=${s.id};renderDetail()">
+          <div><div style="font-size:12px;font-weight:700">${s.name}</div><div style="margin-top:2px">${badge(s.status)}</div></div>
+          <div style="font-size:12px;font-weight:700;color:#0f172a">${s.monthly>0?fmt(s.monthly):'—'}</div>
+        </div>`).join('')}
+    </div>
+    <div class="panel">
+      <button class="btn btn-primary" style="width:100%" onclick="goto('map')">🗺️ 在地圖查看</button>
+    </div>`;
+}
+
+function deleteDealer(){if(!confirm('確定刪除此經銷商？'))return;dealers=dealers.filter(d=>d.id!==detailId);saveData();toast('已刪除');goto('dealers');}
+function deleteCase(cid){if(!confirm('確定刪除此案件？'))return;dealers=dealers.map(d=>d.id===detailId?{...d,cases:(d.cases||[]).filter(c=>c.id!==cid)}:d);renderDetail();saveData();toast('案件已刪除');}
+
+// ═══════════════════════════════════════════════
+// DEALER MODAL
+// ═══════════════════════════════════════════════
+function openDealerModal(id){
+  editingDealerId=id;
+  const d=id?dealers.find(x=>x.id===id):null;
+  document.getElementById('dm-title').textContent=id?'✏️ 編輯經銷商':'＋ 新增經銷商';
+  document.getElementById('dm-name').value=d?d.name:'';
+  document.getElementById('dm-city').value=d?d.city:'';
+  document.getElementById('dm-status').value=d?d.status:'合作中';
+  document.getElementById('dm-contact').value=d?d.contact||'':'';
+  document.getElementById('dm-phone').value=d?d.phone||'':'';
+  document.getElementById('dm-monthly').value=d&&d.monthly?d.monthly:'';
+  document.getElementById('dm-orders').value=d&&d.orders?d.orders:'';
+  // Sales picker
+  const selIds=d?(d.salesIds||[]):[];
+  document.getElementById('dm-sales-picker').innerHTML=salespeople.map(s=>
+    `<button class="ssel ${selIds.includes(s.id)?'active':''}" data-sid="${s.id}" onclick="toggleSalesPick(this)">${s.name}</button>`).join('');
+  document.getElementById('dealer-modal').classList.add('show');
+}
+function toggleSalesPick(btn){btn.classList.toggle('active');}
+function saveDealerModal(){
+  const name=document.getElementById('dm-name').value.trim(),city=document.getElementById('dm-city').value;
+  if(!name||!city){toast('請填寫公司名稱和縣市');return;}
+  const salesIds=[...document.querySelectorAll('#dm-sales-picker .ssel.active')].map(b=>parseInt(b.dataset.sid));
+  const data={name,city,status:document.getElementById('dm-status').value,contact:document.getElementById('dm-contact').value,phone:document.getElementById('dm-phone').value,monthly:parseInt(document.getElementById('dm-monthly').value)||0,orders:parseInt(document.getElementById('dm-orders').value)||0,salesIds};
+  if(editingDealerId){dealers=dealers.map(d=>d.id===editingDealerId?{...d,...data}:d);saveData();toast('✅ 已更新');}
+  else{dealers.push({id:Date.now(),...data,joined:new Date().toLocaleDateString('zh-TW'),cases:[]});saveData();toast('✅ 已新增');}
+  closeModal('dealer');
+  if(currentPage==='dealers')renderDealers();
+  else if(currentPage==='detail')renderDetail();
+  else if(currentPage==='dashboard')renderDashboard();
+}
+
+// ═══════════════════════════════════════════════
+// CASE MODAL
+// ═══════════════════════════════════════════════
+function openCaseModalFor(dealerId,caseId){
+  editingDealerId=dealerId;editingCaseId=caseId;
+  const d=dealers.find(x=>x.id===dealerId);
+  const c=caseId?d.cases.find(x=>x.id===caseId):null;
+  document.getElementById('cm-title').textContent=caseId?'✏️ 編輯案件':'＋ 新增案件';
+  document.getElementById('cm-name').value=c?c.name:'';
+  document.getElementById('cm-status').value=c?c.status:'詢價中';
+  document.getElementById('cm-est').value=c&&c.est?c.est:'';
+  document.getElementById('cm-actual').value=c&&c.actual?c.actual:'';
+  document.getElementById('cm-date').value=c&&c.date?c.date.replace(/\//g,'-'):'';
+  document.getElementById('cm-note').value=c?c.note||'':'';
+  // Sales dropdown
+  document.getElementById('cm-sales').innerHTML=`<option value="">未指派</option>`+salespeople.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  document.getElementById('cm-sales').value=c&&c.salesId?c.salesId:'';
+  // Items
+  document.getElementById('items-editor').innerHTML='';
+  const items=c?(c.items||[]):[];
+  items.forEach(it=>addItemRow(it));
+  if(items.length===0)addItemRow();
+  document.getElementById('case-modal').classList.add('show');
+}
+function addItemRow(val=''){
+  const div=document.createElement('div');div.className='item-row';
+  div.innerHTML=`<input placeholder="例：工業空調×2" value="${val.replace(/"/g,'&quot;')}"/><button class="rm-btn" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('items-editor').appendChild(div);
+}
+function saveCaseModal(){
+  const name=document.getElementById('cm-name').value.trim();if(!name){toast('請填寫案件名稱');return;}
+  const items=[...document.querySelectorAll('#items-editor .item-row input')].map(i=>i.value.trim()).filter(Boolean);
+  const raw=document.getElementById('cm-date').value;
+  const caseData={id:editingCaseId||Date.now(),name,status:document.getElementById('cm-status').value,salesId:parseInt(document.getElementById('cm-sales').value)||0,est:parseInt(document.getElementById('cm-est').value)||0,actual:parseInt(document.getElementById('cm-actual').value)||0,date:raw?raw.replace(/-/g,'/'):'',note:document.getElementById('cm-note').value.trim(),items};
+  dealers=dealers.map(d=>{if(d.id!==editingDealerId)return d;const cases=d.cases||[];if(editingCaseId)return{...d,cases:cases.map(c=>c.id===editingCaseId?caseData:c)};return{...d,cases:[...cases,caseData]};});
+  closeModal('case');
+  if(currentPage==='detail')renderDetail();
+  else if(currentPage==='cases')renderAllCases();
+  saveData();toast(editingCaseId?'✅ 案件已更新':'✅ 案件已新增');
+}
+
+// ═══════════════════════════════════════════════
+// SALES MODAL
+// ═══════════════════════════════════════════════
+function openSalesModal(id){
+  editingSalesId=id;
+  const s=id?salespeople.find(x=>x.id===id):null;
+  document.getElementById('sm-title').textContent=id?'✏️ 編輯業務':'＋ 新增業務';
+  document.getElementById('sm-name').value=s?s.name:'';
+  document.getElementById('sm-phone').value=s?s.phone||'':'';
+  document.getElementById('sm-email').value=s?s.email||'':'';
+  document.getElementById('sm-region').value=s?s.region||'':'';
+  document.getElementById('sales-modal').classList.add('show');
+}
+function saveSalesModal(){
+  const name=document.getElementById('sm-name').value.trim();if(!name){toast('請填寫姓名');return;}
+  const data={name,phone:document.getElementById('sm-phone').value,email:document.getElementById('sm-email').value,region:document.getElementById('sm-region').value};
+  if(editingSalesId)salespeople=salespeople.map(s=>s.id===editingSalesId?{...s,...data}:s);
+  else salespeople.push({id:Date.now(),...data});
+  closeModal('sales');renderSales();saveData();toast('✅ 已儲存');
+}
+function deleteSales(id){if(!confirm('確定刪除此業務人員？'))return;salespeople=salespeople.filter(s=>s.id!==id);renderSales();saveData();toast('已刪除');}
+
+// ═══════════════════════════════════════════════
+// MODAL UTILS
+// ═══════════════════════════════════════════════
+function closeModal(type){document.getElementById(type+'-modal').classList.remove('show');}
+['dealer-modal','case-modal','sales-modal','card-modal','visit-modal','goal-modal'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+});
+
+
+// ═══════════════════════════════════════════════
+// LOCAL STORAGE — 自動儲存 / 讀取
+// ═══════════════════════════════════════════════
+const LS_KEY = 'dealer_sys_v1';
+function saveData(){
+  try{
+    const data = JSON.stringify({dealers,salespeople,visits,goals});
+    localStorage.setItem(LS_KEY, data);
+    // 同時更新 HTML 內嵌 tag（供手動存檔用）
+    const tag = document.getElementById('saved-data');
+    if(tag) tag.textContent = data;
+  }catch(e){ console.warn('saveData error:', e); }
+}
+
+// 手動存檔：把目前資料下載成新版 HTML（資料嵌入其中）
+function downloadWithData(){
+  const data = JSON.stringify({dealers,salespeople,visits,goals});
+  const html = document.documentElement.outerHTML;
+  // 把 saved-data tag 的內容換成最新資料
+  const updated = html.replace(
+    /<script id="saved-data" type="application\/json">[^<]*<\/script>/,
+    `<script id="saved-data" type="application/json">${data}<\/script>`
+  );
+  const blob = new Blob([updated], {type:'text/html;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '經銷商管理系統.html';
+  a.click();
+  toast('✅ 已存檔！請用新下載的檔案替換舊的');
+}
+function loadData(){
+  try{
+    // 優先讀 HTML 內嵌資料（最可靠，不怕 localStorage 被清）
+    const tag = document.getElementById('saved-data');
+    const embedded = tag ? tag.textContent.trim() : '';
+    if(embedded && embedded !== '{}'){
+      const d = JSON.parse(embedded);
+      if(d.dealers && d.dealers.length>0) dealers = d.dealers;
+      if(d.salespeople && d.salespeople.length>0) salespeople = d.salespeople;
+      if(d.visits)  visits = d.visits||[];
+      if(d.goals)   goals  = d.goals||[];
+      console.log('[系統] 從檔案讀取資料，dealers:', dealers.length);
+      return;
+    }
+    // Fallback：讀 localStorage
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw){ console.log('[系統] 第一次使用，載入初始資料'); return; }
+    const d = JSON.parse(raw);
+    if(d.dealers && d.dealers.length>0) dealers = d.dealers;
+    if(d.salespeople && d.salespeople.length>0) salespeople = d.salespeople;
+    if(d.visits)  visits = d.visits||[];
+    if(d.goals)   goals  = d.goals||[];
+    console.log('[系統] 從 localStorage 讀取，dealers:', dealers.length);
+  } catch(e){
+    console.warn('[系統] 讀取失敗，使用初始資料', e);
+  }
+}
+
+// Auto-save on every data change — patch key functions
+const _origSave = saveData;
+function autoSave(){ _origSave(); }
+
+// ═══════════════════════════════════════════════
+// VISIT DATA
+// ═══════════════════════════════════════════════
+let visits = [
+  {id:2001,dealerId:10,date:'2025/04/10',contact:'陳協理',salesId:0,subject:'Q2採購計劃討論',content:'討論下半年設備需求，對我們的報價有興趣',reaction:'🔥 積極',followup:'2025/05/01',caseId:0,actions:'寄送詳細報價單、安排 demo'},
+  {id:2002,dealerId:11,date:'2025/04/15',contact:'簡先生',salesId:1,subject:'奧鹿案件跟進',content:'確認規格需求，客戶要求5/5前完成報價',reaction:'✅ 正面',followup:'2025/04/25',caseId:1101,actions:'完成報價單送出'},
+  {id:2003,dealerId:12,date:'2025/04/20',contact:'林組長',salesId:0,subject:'宜特案件初訪',content:'客戶評估中，有競爭對手在跑',reaction:'😐 中立',followup:'2025/05/10',caseId:1201,actions:'準備競品比較表'},
+];
+
+let goals = [
+  {id:3001,name:'2025 Q2 整體業績目標',type:'total',target:'',period:'2025 Q2',targetAmt:8000000,current:0},
+  {id:3002,name:'新竹區域目標',type:'city',target:'新竹市',period:'2025 Q2',targetAmt:2000000,current:0},
+  {id:3003,name:'統睿科技目標',type:'dealer',target:'10',period:'2025 Q2',targetAmt:1500000,current:0},
+];
+
+// ═══════════════════════════════════════════════
+// GOTO PATCH — add visits/goals
+// ═══════════════════════════════════════════════
+const _origGoto = goto;
+
+
+// ═══════════════════════════════════════════════
+// ALERT — 到期提醒
+// ═══════════════════════════════════════════════
+function getAlerts(){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const alerts=[];
+  // 案件到期
+  dealers.forEach(d=>(d.cases||[]).forEach(c=>{
+    if(!c.date||c.status==='已成交'||c.status==='未成交') return;
+    const dt=new Date(c.date.replace(/\//g,'-'));
+    const diff=Math.ceil((dt-today)/(1000*60*60*24));
+    if(diff<=7 && diff>=0) alerts.push({type:'case',level:diff<=3?'red':'amber',msg:`⚠️ 【${d.name}】「${c.name}」${diff===0?'今天到期':diff+'天後到期'}（${c.date}）`,dealerId:d.id});
+    if(diff<0) alerts.push({type:'case',level:'red',msg:`🚨 【${d.name}】「${c.name}」已逾期 ${-diff} 天！`,dealerId:d.id});
+  }));
+  // 拜訪跟進
+  visits.forEach(v=>{
+    if(!v.followup) return;
+    const dt=new Date(v.followup.replace(/\//g,'-'));
+    const diff=Math.ceil((dt-today)/(1000*60*60*24));
+    const d=dealers.find(x=>x.id===v.dealerId);
+    if(diff<=3 && diff>=0) alerts.push({type:'visit',level:'blue',msg:`📅 需跟進：【${d?.name||''}】${v.subject}（${v.followup}）`});
+  });
+  return alerts;
+}
+
+function renderAlertBar(containerId){
+  const alerts=getAlerts();
+  const el=document.getElementById(containerId);
+  if(!el) return;
+  if(!alerts.length){el.innerHTML='';return;}
+  const colors={red:'#fef2f2',amber:'#fef9c3',blue:'#dbeafe'};
+  const tcolors={red:'#dc2626',amber:'#a16207',blue:'#1d4ed8'};
+  el.innerHTML=`<div style="display:flex;flex-direction:column;gap:6px">
+    ${alerts.slice(0,5).map(a=>`
+      <div style="background:${colors[a.level]};color:${tcolors[a.level]};border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:${a.dealerId?'pointer':'default'};display:flex;align-items:center;gap:6px"
+        ${a.dealerId?`onclick="detailId=${a.dealerId};goto('detail')"`:''}>${a.msg}</div>`).join('')}
+    ${alerts.length>5?`<div style="font-size:11px;color:#94a3b8;text-align:center">還有 ${alerts.length-5} 個提醒</div>`:''}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// VISITS RENDER
+// ═══════════════════════════════════════════════
+let editingVisitId=null;
+
+function renderVisits(){
+  // Populate dealer filter
+  const sel=document.getElementById('visit-dealer-filter');
+  if(sel){
+    const cur=sel.value;
+    sel.innerHTML='<option value="">全部經銷商</option>'+dealers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+    sel.value=cur;
+  }
+  renderAlertBar('visit-alerts');
+  const search=(document.getElementById('visit-search')||{}).value||'';
+  const dFilter=document.getElementById('visit-dealer-filter')?.value||'';
+  let vis=[...visits].filter(v=>{
+    const d=dealers.find(x=>x.id===v.dealerId);
+    const matchD=!dFilter||String(v.dealerId)===dFilter;
+    const matchS=!search||(v.subject||'').includes(search)||(v.content||'').includes(search)||(d?.name||'').includes(search);
+    return matchD&&matchS;
+  }).sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')));
+
+  const today=new Date(); today.setHours(0,0,0,0);
+  document.getElementById('visit-tbody').innerHTML=vis.map(v=>{
+    const d=dealers.find(x=>x.id===v.dealerId);
+    const sn=salesName(v.salesId);
+    let fuColor='#64748b';
+    if(v.followup){
+      const dt=new Date(v.followup.replace(/\//g,'-'));
+      const diff=Math.ceil((dt-today)/(1000*60*60*24));
+      if(diff<0) fuColor='#dc2626';
+      else if(diff<=3) fuColor='#d97706';
+    }
+    return`<tr>
+      <td style="color:#64748b;font-size:12px;white-space:nowrap">${v.date}</td>
+      <td><span style="font-weight:700;cursor:pointer;color:#2563eb" onclick="detailId=${v.dealerId};goto('detail')">${d?.name||'—'}</span></td>
+      <td style="color:#64748b">${v.contact||'—'}</td>
+      <td style="font-weight:700">${v.subject||'—'}</td>
+      <td style="color:#475569;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.content||'—'}</td>
+      <td>${v.reaction||'—'}</td>
+      <td style="color:${fuColor};font-weight:600;font-size:12px">${v.followup||'—'}</td>
+      <td style="color:#64748b;font-size:12px">${sn}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="view-btn" onclick="openVisitModal(${v.id},null)">編輯</button>
+          <button style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:11px" onclick="deleteVisit(${v.id})">刪</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="9" style="padding:30px;text-align:center;color:#cbd5e1">尚無拜訪記錄</td></tr>';
+}
+
+function openVisitModal(vid, dealerIdPrefill){
+  editingVisitId=vid;
+  const v=vid?visits.find(x=>x.id===vid):null;
+  document.getElementById('vm-title').textContent=vid?'✏️ 編輯拜訪記錄':'📅 新增拜訪記錄';
+  // fill dealer select
+  const ds=document.getElementById('vm-dealer');
+  ds.innerHTML='<option value="">請選擇</option>'+dealers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  // fill sales select
+  const ss=document.getElementById('vm-sales');
+  ss.innerHTML='<option value="">未指派</option>'+salespeople.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  // fill case select based on dealer
+  if(v){
+    document.getElementById('vm-date').value=v.date?v.date.replace(/\//g,'-'):'';
+    ds.value=v.dealerId||'';
+    document.getElementById('vm-contact').value=v.contact||'';
+    ss.value=v.salesId||'';
+    document.getElementById('vm-subject').value=v.subject||'';
+    document.getElementById('vm-content').value=v.content||'';
+    document.getElementById('vm-reaction').value=v.reaction||'';
+    document.getElementById('vm-followup').value=v.followup?v.followup.replace(/\//g,'-'):'';
+    document.getElementById('vm-actions').value=v.actions||'';
+    updateVisitCases(v.dealerId,v.caseId);
+  } else {
+    document.getElementById('vm-date').value=new Date().toISOString().split('T')[0];
+    ds.value=dealerIdPrefill||'';
+    ['vm-contact','vm-subject','vm-content','vm-reaction','vm-followup','vm-actions'].forEach(id=>document.getElementById(id).value='');
+    if(dealerIdPrefill) updateVisitCases(dealerIdPrefill,null);
+    document.querySelectorAll('#visit-modal .ssel').forEach(b=>b.classList.remove('active'));
+  }
+  document.getElementById('visit-modal').classList.add('show');
+}
+
+function updateVisitCases(did,selectedCid){
+  const cs=document.getElementById('vm-case');
+  const d=dealers.find(x=>x.id===parseInt(did));
+  cs.innerHTML='<option value="">不關聯</option>'+((d?.cases)||[]).map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  if(selectedCid) cs.value=selectedCid;
+}
+
+function setVisitReaction(btn,r){
+  document.querySelectorAll('#visit-modal .ssel').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('vm-reaction').value=r;
+}
+
+function saveVisitModal(){
+  const did=parseInt(document.getElementById('vm-dealer').value);
+  const subj=document.getElementById('vm-subject').value.trim();
+  if(!did||!subj){toast('請填寫經銷商與拜訪主題');return;}
+  const raw=document.getElementById('vm-date').value;
+  const fu=document.getElementById('vm-followup').value;
+  const vdata={
+    id:editingVisitId||Date.now(),dealerId:did,
+    date:raw?raw.replace(/-/g,'/'):new Date().toLocaleDateString('zh-TW'),
+    contact:document.getElementById('vm-contact').value,
+    salesId:parseInt(document.getElementById('vm-sales').value)||0,
+    subject:subj,
+    content:document.getElementById('vm-content').value,
+    reaction:document.getElementById('vm-reaction').value,
+    followup:fu?fu.replace(/-/g,'/') :'',
+    caseId:parseInt(document.getElementById('vm-case').value)||0,
+    actions:document.getElementById('vm-actions').value,
+  };
+  if(editingVisitId) visits=visits.map(v=>v.id===editingVisitId?vdata:v);
+  else visits.push(vdata);
+  closeModal('visit'); renderVisits(); saveData();
+  toast(editingVisitId?'✅ 拜訪記錄已更新':'✅ 拜訪記錄已新增');
+}
+
+function deleteVisit(id){if(!confirm('確定刪除？'))return;visits=visits.filter(v=>v.id!==id);renderVisits();saveData();toast('已刪除');}
+
+// ═══════════════════════════════════════════════
+// GOALS RENDER
+// ═══════════════════════════════════════════════
+let editingGoalId=null;
+
+function calcGoalCurrent(g){
+  if(g.current>0) return g.current; // manual
+  const totalRev=dealers.reduce((a,d)=>a+d.monthly,0);
+  const totalEst=dealers.flatMap(d=>d.cases||[]).reduce((a,c)=>a+c.est,0);
+  if(g.type==='total') return totalRev||totalEst;
+  if(g.type==='dealer'){
+    const d=dealers.find(x=>x.id===parseInt(g.target));
+    return d?(d.monthly||caseEst(d.id)):0;
+  }
+  if(g.type==='city'){
+    return dealers.filter(d=>d.city===g.target).reduce((a,d)=>a+(d.monthly||caseEst(d.id)),0);
+  }
+  if(g.type==='sales'){
+    const sid=parseInt(g.target);
+    return dealers.flatMap(d=>d.cases||[]).filter(c=>c.salesId===sid).reduce((a,c)=>a+c.est,0);
+  }
+  return 0;
+}
+
+function renderGoals(){
+  const totalTarget=goals.reduce((a,g)=>a+g.targetAmt,0);
+  const totalCurrent=goals.reduce((a,g)=>a+calcGoalCurrent(g),0);
+  const avgPct=totalTarget>0?Math.round(totalCurrent/totalTarget*100):0;
+
+  document.getElementById('goals-kpi').innerHTML=[
+    {l:'目標總數',v:goals.length+'個',c:'#2563eb'},
+    {l:'目標總金額',v:fmt(totalTarget)+' 元',c:'#7c3aed'},
+    {l:'目前達成',v:fmt(totalCurrent)+' 元',c:'#16a34a'},
+    {l:'整體達成率',v:avgPct+'%',c:avgPct>=80?'#16a34a':avgPct>=50?'#d97706':'#dc2626'},
+  ].map(k=>`<div class="kcard" style="border-top-color:${k.c}">
+    <div class="kcard-val" style="color:${k.c}">${k.v}</div>
+    <div class="kcard-lbl">${k.l}</div>
+  </div>`).join('');
+
+  document.getElementById('goals-list').innerHTML=goals.map(g=>{
+    const cur=calcGoalCurrent(g);
+    const pct=g.targetAmt>0?Math.min(Math.round(cur/g.targetAmt*100),100):0;
+    const fillColor=pct>=80?'#16a34a':pct>=50?'#f59e0b':'#ef4444';
+    let targetLabel='整體';
+    if(g.type==='dealer'){const d=dealers.find(x=>x.id===parseInt(g.target));targetLabel=d?.name||g.target;}
+    else if(g.type==='city') targetLabel=g.target;
+    else if(g.type==='sales'){const s=salespeople.find(x=>x.id===parseInt(g.target));targetLabel=s?.name||g.target;}
+    return`<div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:800">${g.name}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">${g.period} · ${targetLabel}</div>
+        </div>
+        <div style="display:flex;gap:5px">
+          <button class="view-btn" onclick="openGoalModal(${g.id})">編輯</button>
+          <button style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:5px;padding:3px 7px;cursor:pointer;font-size:11px" onclick="deleteGoal(${g.id})">刪</button>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px">
+        <span style="color:#64748b">目前：<b style="color:${fillColor}">${fmt(cur)} 元</b></span>
+        <span style="color:#64748b">目標：<b>${fmt(g.targetAmt)} 元</b></span>
+        <span style="font-weight:800;color:${fillColor}">${pct}%</span>
+      </div>
+      <div class="goal-bar"><div class="goal-fill" style="width:${pct}%;background:${fillColor}"></div></div>
+      ${pct>=100?'<div style="font-size:11px;color:#16a34a;margin-top:5px;font-weight:700">🎉 已達成目標！</div>':
+        `<div style="font-size:11px;color:#94a3b8;margin-top:5px">還差 ${fmt(g.targetAmt-cur)} 元</div>`}
+    </div>`;
+  }).join('')||'<div style="color:#cbd5e1;font-size:13px;padding:20px">尚未設定任何目標</div>';
+}
+
+function openGoalModal(gid){
+  editingGoalId=gid;
+  const g=gid?goals.find(x=>x.id===gid):null;
+  document.getElementById('gm-title').textContent=gid?'✏️ 編輯目標':'🎯 設定業績目標';
+  document.getElementById('gm-name').value=g?g.name:'';
+  document.getElementById('gm-type').value=g?g.type:'total';
+  document.getElementById('gm-period').value=g?g.period:'2025 Q2';
+  document.getElementById('gm-target-amt').value=g&&g.targetAmt?g.targetAmt:'';
+  document.getElementById('gm-current').value=g&&g.current?g.current:'';
+  updateGoalTargetSelect(g?g.type:'total',g?g.target:'');
+  document.getElementById('goal-modal').classList.add('show');
+}
+
+function updateGoalTargetSelect(type,cur){
+  const sel=document.getElementById('gm-target');
+  if(type==='total'){sel.innerHTML='<option value="">整體</option>';return;}
+  if(type==='dealer') sel.innerHTML=dealers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+  if(type==='city') sel.innerHTML=[...new Set(dealers.map(d=>d.city))].map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(type==='sales') sel.innerHTML=salespeople.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+document.getElementById('gm-type').addEventListener('change',function(){updateGoalTargetSelect(this.value,'');});
+
+function saveGoalModal(){
+  const name=document.getElementById('gm-name').value.trim();
+  if(!name){toast('請填寫目標名稱');return;}
+  const gdata={
+    id:editingGoalId||Date.now(),name,
+    type:document.getElementById('gm-type').value,
+    target:document.getElementById('gm-target').value,
+    period:document.getElementById('gm-period').value,
+    targetAmt:parseInt(document.getElementById('gm-target-amt').value)||0,
+    current:parseInt(document.getElementById('gm-current').value)||0,
+  };
+  if(editingGoalId) goals=goals.map(g=>g.id===editingGoalId?gdata:g);
+  else goals.push(gdata);
+  closeModal('goal'); renderGoals(); saveData();
+  toast(editingGoalId?'✅ 目標已更新':'✅ 目標已新增');
+}
+
+function deleteGoal(id){if(!confirm('確定刪除？'))return;goals=goals.filter(g=>g.id!==id);renderGoals();saveData();toast('已刪除');}
+
+// ═══════════════════════════════════════════════
+// DETAIL VISITS TAB
+// ═══════════════════════════════════════════════
+const _origSwitchTab = switchTab;
+function switchTab(tab){
+  activeTab=tab;
+  ['cases','salespeople','visits'].forEach(t=>{
+    const tb=document.getElementById('tab-'+t);
+    const tc=document.getElementById('tab-content-'+t);
+    if(tb) tb.classList.toggle('active',t===tab);
+    if(tc) tc.style.display=t===tab?'block':'none';
+  });
+  if(tab==='visits') renderDetailVisits();
+}
+
+function renderDetailVisits(){
+  const myVisits=visits.filter(v=>v.dealerId===detailId).sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')));
+  document.getElementById('tab-content-visits').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:#64748b">共 ${myVisits.length} 筆拜訪記錄</div>
+      <button class="btn btn-primary btn-sm" onclick="openVisitModal(null,${detailId})">＋ 新增拜訪</button>
+    </div>
+    ${myVisits.map(v=>`
+      <div class="visit-item">
+        <div class="visit-date">${v.date} ${v.salesId?'· '+salesName(v.salesId):''}</div>
+        <div class="visit-title">${v.subject}</div>
+        ${v.reaction?`<div style="margin-top:3px">${v.reaction}</div>`:''}
+        ${v.content?`<div class="visit-note">${v.content}</div>`:''}
+        ${v.actions?`<div style="margin-top:4px;font-size:11px;color:#7c3aed;font-weight:600">📌 ${v.actions}</div>`:''}
+        ${v.followup?`<div style="margin-top:4px;font-size:11px;color:#d97706;font-weight:600">📅 跟進：${v.followup}</div>`:''}
+        <div style="margin-top:6px;display:flex;gap:5px">
+          <button class="view-btn" onclick="openVisitModal(${v.id},null)">編輯</button>
+          <button style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:5px;padding:2px 7px;cursor:pointer;font-size:11px" onclick="deleteVisit(${v.id});renderDetailVisits()">刪</button>
+        </div>
+      </div>`).join('')||'<div style="color:#cbd5e1;font-size:13px;padding:10px 0">尚無拜訪記錄，點擊上方按鈕新增</div>'}`;
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD PATCH — add alerts
+// ═══════════════════════════════════════════════
+const _origRenderDash = renderDashboard;
+function renderDashboard(){
+  _origRenderDash();
+  // Inject alert bar after KPI
+  setTimeout(()=>{
+    const kpi=document.getElementById('dash-kpi');
+    if(kpi){
+      let alertDiv=document.getElementById('dash-alert-bar');
+      if(!alertDiv){alertDiv=document.createElement('div');alertDiv.id='dash-alert-bar';kpi.parentNode.insertBefore(alertDiv,kpi.nextSibling);}
+      const a=getAlerts();
+      if(a.length) alertDiv.innerHTML='<div style="margin-bottom:14px">'+
+        a.slice(0,3).map(x=>`<div style="background:${x.level==='red'?'#fef2f2':x.level==='amber'?'#fef9c3':'#dbeafe'};color:${x.level==='red'?'#dc2626':x.level==='amber'?'#a16207':'#1d4ed8'};border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;margin-bottom:5px;cursor:${x.dealerId?'pointer':'default'}" ${x.dealerId?`onclick="detailId=${x.dealerId};goto('detail')"`:''} >${x.msg}</div>`).join('')+
+        '</div>';
+    }
+  },50);
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT EXCEL (CSV fallback)
+// ═══════════════════════════════════════════════
+function exportExcel(){
+  // 輸出三個 sheet 合成一個 CSV
+  const rows=[['=== 經銷商列表 ==='],
+    ['公司名稱','縣市','狀態','本月業績','案件數','預計金額','負責業務','聯絡人','加入日期'],
+    ...dealers.map(d=>[d.name,d.city,d.status,d.monthly,dealerCases(d.id).length,caseEst(d.id),dealerSalesNames(d),d.contact||'',d.joined]),
+    [],['=== 案件總覽 ==='],
+    ['案件名稱','經銷商','業務','狀態','預計金額','實際金額','預計日期','備註'],
+    ...allCases().map(c=>[c.name,c.dealerName,salesName(c.salesId),c.status,c.est,c.actual||0,c.date||'',c.note||'']),
+    [],['=== 拜訪記錄 ==='],
+    ['日期','經銷商','聯絡人','業務','主題','內容','反應','下次跟進','行動項目'],
+    ...visits.map(v=>{const d=dealers.find(x=>x.id===v.dealerId);return[v.date,d?.name||'',v.contact||'',salesName(v.salesId),v.subject||'',v.content||'',v.reaction||'',v.followup||'',v.actions||''];}),
+  ];
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='經銷商管理系統_'+new Date().toLocaleDateString('zh-TW').replace(/\//g,'')+'.csv';
+  a.click();
+  toast('✅ 已匯出 CSV，可用 Excel 開啟');
+}
+
+// ═══════════════════════════════════════════════
+// TAGS SYSTEM — 品牌/廠商關聯
+// ═══════════════════════════════════════════════
+// 簡單標籤存在 case.tags 欄位，已在案件 modal 可輸入
+// 在案件列表額外顯示 tag pills
+
+// ═══════════════════════════════════════════════
+// PATCH closeModal to include visit/goal
+// ═══════════════════════════════════════════════
+const _origCloseModal=closeModal;
+function closeModal(type){
+  ['dealer-modal','case-modal','sales-modal','card-modal','visit-modal','goal-modal'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.classList.remove('show');
+  });
+}
+
+// ═══════════════════════════════════════════════
+// PATCH detail renderDetailRight — add visit button
+// ═══════════════════════════════════════════════
+const _origRenderDetailRight=renderDetailRight;
+function renderDetailRight(){
+  _origRenderDetailRight();
+  // Add quick visit button
+  setTimeout(()=>{
+    const dr=document.getElementById('d-right');
+    if(!dr) return;
+    const vBtn=document.createElement('div');
+    vBtn.className='panel';
+    vBtn.innerHTML=`<button class="btn btn-green" style="width:100%" onclick="openVisitModal(null,${detailId})">📅 新增拜訪記錄</button>`;
+    dr.appendChild(vBtn);
+    // Show visit count
+    const vc=visits.filter(v=>v.dealerId===detailId).length;
+    if(vc){
+      const vcDiv=document.createElement('div');
+      vcDiv.style.cssText='background:#eff6ff;border-radius:8px;padding:10px 14px;font-size:12px;color:#2563eb;font-weight:600;text-align:center;cursor:pointer';
+      vcDiv.textContent='📅 已有 '+vc+' 筆拜訪記錄 → 點擊查看';
+      vcDiv.onclick=()=>switchTab('visits');
+      dr.appendChild(vcDiv);
+    }
+  },80);
+}
+
+
+
+// ═══════════════════════════════════════════════
+// GOTO PATCH v2 — add leaderboard / cardwall / aichat
+// ═══════════════════════════════════════════════
+const _goto2_orig = goto;
+
+
+// ═══════════════════════════════════════════════
+// 🏆 LEADERBOARD
+// ═══════════════════════════════════════════════
+const COLORS_LB = ['linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#94a3b8,#64748b)','linear-gradient(135deg,#c08050,#a06030)',
+  '#3b82f6','#8b5cf6','#10b981','#f43f5e','#06b6d4','#84cc16','#f97316'];
+const MEDALS = ['🥇','🥈','🥉'];
+
+function getLBData(){
+  const type = document.getElementById('lb-type')?.value||'sales';
+  const metric = document.getElementById('lb-metric')?.value||'est';
+  let items=[];
+  if(type==='sales'){
+    items = salespeople.map(s=>{
+      const myCases = allCases().filter(c=>c.salesId===s.id);
+      const myDealers = dealers.filter(d=>(d.salesIds||[]).includes(s.id));
+      const val = metric==='est'?myCases.reduce((a,c)=>a+c.est,0)
+        :metric==='monthly'?myDealers.reduce((a,d)=>a+d.monthly,0)
+        :myCases.length;
+      return {id:s.id,name:s.name,sub:s.region||'業務',val,cases:myCases.length,dealers:myDealers.length};
+    });
+  } else if(type==='dealer'){
+    items = dealers.map(d=>{
+      const val = metric==='est'?caseEst(d.id):metric==='monthly'?d.monthly:dealerCases(d.id).length;
+      return {id:d.id,name:d.name,sub:d.city,val,cases:dealerCases(d.id).length,monthly:d.monthly};
+    });
+  } else {
+    const cities={};
+    dealers.forEach(d=>{
+      if(!cities[d.city]) cities[d.city]={name:d.city,sub:'縣市',dealers:0,cases:0,est:0,monthly:0};
+      cities[d.city].dealers++;
+      cities[d.city].cases+=dealerCases(d.id).length;
+      cities[d.city].est+=caseEst(d.id);
+      cities[d.city].monthly+=d.monthly;
+    });
+    items=Object.values(cities).map(x=>{
+      const val=metric==='est'?x.est:metric==='monthly'?x.monthly:x.cases;
+      return{...x,id:x.name,val};
+    });
+  }
+  items = items.sort((a,b)=>b.val-a.val);
+  // 如果全是0，改顯示案件數
+  if(items.every(x=>x.val===0) && metric!=='cases'){
+    items=items.map(x=>({...x,val:x.cases||0})).sort((a,b)=>b.val-a.val);
+  }
+  // 全部顯示，不過濾
+  return items;
+}
+
+function renderLeaderboard(){
+  const items = getLBData();
+  const metric = document.getElementById('lb-metric')?.value||'est';
+  const maxVal = items[0]?.val||1;
+  const metricLabel = metric==='est'?'預計金額':metric==='monthly'?'本月業績':'案件數';
+  const metricUnit = metric==='cases'?'件':' 元';
+
+  // Podium (top 3)
+  const podium = document.getElementById('lb-podium');
+  const top3 = items.slice(0,3);
+  // Reorder: 2nd, 1st, 3rd
+  const order = top3.length>=3?[top3[1],top3[0],top3[2]]:top3.length===2?[top3[1],top3[0]]:[top3[0]];
+  const heights = [140,180,110];
+  const podiumRanks = top3.length>=3?[2,1,3]:top3.length===2?[2,1]:[1];
+  podium.innerHTML = order.map((item,i)=>{
+    if(!item) return '';
+    const rank = podiumRanks[i];
+    const h = heights[i]||110;
+    const col = COLORS_LB[rank-1];
+    const initials = item.name.slice(0,2);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:0">
+      <div style="text-align:center;margin-bottom:8px">
+        <div style="width:52px;height:52px;border-radius:50%;background:${col};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;margin:0 auto 4px;box-shadow:0 4px 14px rgba(0,0,0,0.2)">${initials}</div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a;max-width:110px;text-align:center;line-height:1.2">${item.name.length>8?item.name.slice(0,8)+'…':item.name}</div>
+        <div style="font-size:12px;font-weight:700;color:${rank===1?'#f59e0b':rank===2?'#94a3b8':'#c08050'}">${MEDALS[rank-1]}</div>
+        <div style="font-size:13px;font-weight:900;color:#0f172a">${metric==='cases'?item.val+'件':fmt(item.val)}</div>
+      </div>
+      <div style="width:110px;height:${h}px;background:${col};border-radius:10px 10px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;box-shadow:0 -4px 12px rgba(0,0,0,0.12)">
+        <span style="font-size:24px">${rank===1?'👑':rank===2?'🥈':'🥉'}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Full list with animated bars
+  const listEl = document.getElementById('lb-list');
+  listEl.innerHTML = items.map((item,i)=>{
+    const pct = Math.round(item.val/maxVal*100);
+    const col = i===0?'#f59e0b':i===1?'#94a3b8':i===2?'#c08050':COLORS_LB[Math.min(i,9)];
+    return `<div class="lb-row" style="background:#f8fafc">
+      <div class="lb-bar-fill" style="width:${pct}%;background:${col}"></div>
+      <div class="lb-rank" style="color:${col}">${i<3?MEDALS[i]:i+1}</div>
+      <div class="lb-info">
+        <div class="lb-name">${item.name}</div>
+        <div class="lb-sub">${item.sub} · ${item.cases||0}件案件</div>
+      </div>
+      <div class="lb-amt" style="color:${col}">${metric==='cases'?item.val+'件':fmt(item.val)+' 元'}</div>
+    </div>`;
+  }).join('')||'<div style="color:#cbd5e1;padding:20px;text-align:center">暫無資料</div>';
+
+  // Animate bars after render
+  setTimeout(()=>{
+    document.querySelectorAll('.lb-bar-fill').forEach((el,i)=>{
+      const w = el.style.width; el.style.width='0'; 
+      setTimeout(()=>el.style.width=w, i*60+100);
+    });
+  },50);
+
+  // Stats
+  const totalEst = allCases().reduce((a,c)=>a+c.est,0);
+  const won = allCases().filter(c=>c.status==='已成交');
+  const wonAmt = won.reduce((a,c)=>a+c.est,0);
+  document.getElementById('lb-stats').innerHTML=[
+    {l:'參賽總數',v:items.length+(document.getElementById('lb-type').value==='sales'?'位':'家'),c:'#2563eb'},
+    {l:'案件預計總額',v:fmt(totalEst)+' 元',c:'#7c3aed'},
+    {l:'已成交金額',v:fmt(wonAmt)+' 元',c:'#16a34a'},
+    {l:'成交率',v:allCases().length?Math.round(won.length/allCases().length*100)+'%':'0%',c:'#f59e0b'},
+  ].map(k=>`<div class="kcard" style="border-top-color:${k.c}"><div class="kcard-val" style="color:${k.c};font-size:18px">${k.v}</div><div class="kcard-lbl">${k.l}</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════
+// 📱 CARD WALL
+// ═══════════════════════════════════════════════
+const AVATAR_COLORS=['linear-gradient(135deg,#3b82f6,#1d4ed8)','linear-gradient(135deg,#16a34a,#15803d)',
+  'linear-gradient(135deg,#7c3aed,#6d28d9)','linear-gradient(135deg,#db2777,#be185d)',
+  'linear-gradient(135deg,#d97706,#b45309)','linear-gradient(135deg,#0891b2,#0e7490)',
+  'linear-gradient(135deg,#dc2626,#b91c1c)','linear-gradient(135deg,#059669,#047857)'];
+
+function getAvatarColor(name){ return AVATAR_COLORS[(name.charCodeAt(0)||0)%AVATAR_COLORS.length]; }
+
+function getAllContacts(){
+  const contacts=[];
+  dealers.forEach(d=>{
+    if(d.contact) contacts.push({
+      type:'dealer',id:d.id,name:d.contact,company:d.name,city:d.city,
+      phone:d.phone||'',email:d.email||'',title:'聯絡人',status:d.status,dealerId:d.id
+    });
+  });
+  salespeople.forEach(s=>{
+    contacts.push({
+      type:'sales',id:s.id,name:s.name,company:s.company||'（內部業務）',city:s.region||'',
+      phone:s.phone||'',email:s.email||'',title:s.title||'業務',status:'內部',salesId:s.id
+    });
+  });
+  return contacts;
+}
+
+function renderCardWall(){
+  const search=(document.getElementById('cw-search')||{}).value||'';
+  const filter=document.getElementById('cw-filter')?.value||'all';
+  let contacts=getAllContacts().filter(ct=>{
+    const matchF=filter==='all'||(filter==='dealer'&&ct.type==='dealer')||(filter==='sales'&&ct.type==='sales');
+    const matchS=!search||ct.name.includes(search)||ct.company.includes(search)||ct.phone.includes(search)||ct.email.includes(search);
+    return matchF&&matchS;
+  });
+  document.getElementById('cw-count').textContent=`共 ${contacts.length} 位聯絡人`;
+  const BG_MAP={'合作中':'linear-gradient(135deg,#16a34a,#15803d)','洽談中':'linear-gradient(135deg,#2563eb,#1d4ed8)','待開發':'linear-gradient(135deg,#d97706,#b45309)','已結束':'#94a3b8','內部':'linear-gradient(135deg,#7c3aed,#6d28d9)'};
+  document.getElementById('cw-grid').innerHTML=contacts.map(ct=>{
+    const bg=BG_MAP[ct.status]||AVATAR_COLORS[0];
+    const initials=ct.name.slice(0,1);
+    const avatarBg=getAvatarColor(ct.name);
+    return `<div class="contact-card" onclick="openContactModal(${JSON.stringify(ct).replace(/"/g,'&quot;')})">
+      <div class="contact-card-top" style="background:${bg}">
+        <div class="contact-avatar" style="background:${avatarBg}">${initials}</div>
+      </div>
+      <div class="contact-card-body">
+        <div class="contact-name">${ct.name}</div>
+        <div class="contact-title">${ct.title}</div>
+        <div class="contact-company">${ct.company.length>12?ct.company.slice(0,12)+'…':ct.company}</div>
+        <div class="contact-info">
+          ${ct.phone?'📞 '+ct.phone+'<br>':''}
+          ${ct.city?'📍 '+ct.city:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('')||'<div style="color:#cbd5e1;font-size:13px;grid-column:1/-1;padding:30px;text-align:center">沒有符合的聯絡人</div>';
+}
+
+function openContactModal(ct){
+  if(typeof ct==='string') ct=JSON.parse(ct);
+  const bg=({'合作中':'linear-gradient(135deg,#16a34a,#15803d)','洽談中':'linear-gradient(135deg,#2563eb,#1d4ed8)','待開發':'linear-gradient(135deg,#d97706,#b45309)','已結束':'#94a3b8','內部':'linear-gradient(135deg,#7c3aed,#6d28d9)'})[ct.status]||'#64748b';
+  document.getElementById('cm-card-header').style.background=bg;
+  document.getElementById('cm-avatar').style.background=getAvatarColor(ct.name);
+  document.getElementById('cm-avatar').textContent=ct.name.slice(0,1);
+  document.getElementById('cm-name').textContent=ct.name;
+  document.getElementById('cm-title-pos').textContent=ct.title+(ct.city?' · '+ct.city:'');
+  document.getElementById('cm-company').textContent=ct.company;
+  const infoItems=[
+    ct.phone&&['📞 電話',ct.phone],ct.email&&['📧 Email',ct.email],
+    ct.city&&['📍 地區',ct.city],['🏷️ 類型',ct.type==='dealer'?'經銷商聯絡人':'內部業務'],
+  ].filter(Boolean);
+  document.getElementById('cm-info-grid').innerHTML=infoItems.map(([l,v])=>`
+    <div style="background:#f8fafc;border-radius:8px;padding:10px 12px">
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:2px">${l}</div>
+      <div style="font-size:12px;font-weight:700;color:#1e293b">${v}</div>
+    </div>`).join('');
+  // Cases
+  if(ct.dealerId){
+    const cases=dealerCases(ct.dealerId);
+    document.getElementById('cm-cases-section').innerHTML=cases.length?`
+      <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">📋 相關案件（${cases.length}件）</div>
+      ${cases.slice(0,3).map(c=>`<div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid #f1f5f9">
+        <span style="font-weight:600">${c.name}</span><span style="color:#7c3aed;font-weight:700">${fmt(c.est)}</span></div>`).join('')}`:'';
+    // Recent visit
+    const myVisits=visits.filter(v=>v.dealerId===ct.dealerId).sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')));
+    document.getElementById('cm-visits-section').innerHTML=myVisits.length?`
+      <div style="font-size:12px;font-weight:700;color:#64748b;margin:10px 0 6px">📅 最近拜訪</div>
+      <div style="background:#f8fafc;border-radius:8px;padding:10px 12px;font-size:12px">
+        <div style="font-weight:700">${myVisits[0].subject}</div>
+        <div style="color:#94a3b8;margin-top:2px">${myVisits[0].date} · ${myVisits[0].reaction||''}</div>
+      </div>`:'';
+    document.getElementById('cm-goto-btn').onclick=()=>{detailId=ct.dealerId;closeModal('contact');goto('detail');};
+    document.getElementById('cm-goto-btn').style.display='block';
+  } else {
+    document.getElementById('cm-cases-section').innerHTML='';
+    document.getElementById('cm-visits-section').innerHTML='';
+    document.getElementById('cm-goto-btn').style.display='none';
+  }
+  document.getElementById('contact-modal').classList.add('show');
+}
+
+// ═══════════════════════════════════════════════
+// 🤖 AI CHAT & PREDICTION
+// ═══════════════════════════════════════════════
+const QUICK_PROMPTS=[
+  '哪個經銷商最有潛力？',
+  '這個月哪些案件要衝刺？',
+  '哪位業務表現最好？',
+  '幫我分析新竹地區的業績狀況',
+  '預測下個月的業績',
+  '哪些案件有風險要注意？',
+  '給我一個業務拓展建議',
+];
+
+let aiHistory=[];
+let aiInitialized=false;
+
+function initAIChat(){
+  if(!aiInitialized){
+    aiInitialized=true;
+    addAIBotMsg('👋 你好！我是你的 AI 業績分析助手。\n\n我已經讀取了你的業務資料，包括 '+dealers.length+' 家經銷商、'+allCases().length+' 個案件、'+visits.length+' 筆拜訪記錄。\n\n有什麼想問的？');
+  }
+  // Quick prompts
+  document.getElementById('ai-quick-btns').innerHTML=QUICK_PROMPTS.map(p=>
+    `<button onclick="askAI('${p}')" style="text-align:left;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;font-family:inherit;color:#475569;transition:all .15s" onmouseover="this.style.background='#eff6ff';this.style.borderColor='#2563eb';this.style.color='#2563eb'" onmouseout="this.style.background='#f8fafc';this.style.borderColor='#e2e8f0';this.style.color='#475569'">${p}</button>`
+  ).join('');
+  renderAIPrediction();
+}
+
+function buildDataContext(){
+  const ac=allCases();
+  const totalEst=ac.reduce((a,c)=>a+c.est,0);
+  const wonCases=ac.filter(c=>c.status==='已成交');
+  const pending=ac.filter(c=>!['已成交','未成交'].includes(c.status));
+  const topDealer=[...dealers].sort((a,b)=>caseEst(b.id)-caseEst(a.id)).slice(0,3);
+  return `【系統資料摘要】
+經銷商：${dealers.length}家（合作中${dealers.filter(d=>d.status==='合作中').length}、洽談中${dealers.filter(d=>d.status==='洽談中').length}）
+案件：共${ac.length}件，預計總額${fmt(totalEst)}元，已成交${wonCases.length}件（${fmt(wonCases.reduce((a,c)=>a+c.est,0))}元）
+進行中案件：${pending.length}件，預計${fmt(pending.reduce((a,c)=>a+c.est,0))}元
+Top3經銷商（依案件金額）：${topDealer.map(d=>d.name+'（'+fmt(caseEst(d.id))+'）').join('、')}
+業務人員：${salespeople.length}位
+拜訪記錄：${visits.length}筆
+縣市分布：${[...new Set(dealers.map(d=>d.city))].join('、')}
+
+各案件詳情：
+${ac.map(c=>`- ${c.name}（${c.dealerName}）：${c.status}，預計${fmt(c.est)}，負責業務：${salesName(c.salesId)}，截止：${c.date||'未設定'}`).join('\n')}
+
+最近拜訪：
+${visits.slice(-5).map(v=>{const d=dealers.find(x=>x.id===v.dealerId);return`- ${v.date} 拜訪${d?.name||''}：${v.subject}，反應：${v.reaction||'未記錄'}`;}).join('\n')}`;
+}
+
+function addAIBotMsg(text, isLoading=false){
+  const el=document.getElementById('ai-messages');
+  const div=document.createElement('div');
+  div.className='ai-msg';
+  div.innerHTML=`<div class="ai-avatar" style="background:linear-gradient(135deg,#2563eb,#7c3aed)">🤖</div>
+    <div class="ai-bubble bot">${isLoading?'<div class="ai-typing"><span></span><span></span><span></span></div>':text.replace(/\n/g,'<br>')}</div>`;
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+  return div;
+}
+
+function addAIUserMsg(text){
+  const el=document.getElementById('ai-messages');
+  const div=document.createElement('div');
+  div.className='ai-msg user';
+  div.innerHTML=`<div class="ai-avatar" style="background:#f1f5f9;font-size:18px">🙋</div>
+    <div class="ai-bubble user">${text}</div>`;
+  el.appendChild(div);
+  el.scrollTop=el.scrollHeight;
+}
+
+async function sendAIMsg(){
+  const input=document.getElementById('ai-input');
+  const text=input.value.trim();
+  if(!text) return;
+  input.value='';
+  await askAI(text);
+}
+
+async function askAI(question){
+  addAIUserMsg(question);
+  const loadingDiv=addAIBotMsg('',true);
+  aiHistory.push({role:'user',content:question});
+
+  const systemPrompt=`你是一個專業的業務分析 AI 助手，精通業績管理和銷售策略。
+請根據以下真實業務資料回答問題，給出具體可行的建議。
+回答要簡潔有力，用繁體中文，可以用 emoji 增加可讀性，重要數字要標粗。
+${buildDataContext()}`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',max_tokens:800,
+        system:systemPrompt,
+        messages:aiHistory.slice(-10)
+      })
+    });
+    const data=await resp.json();
+    const reply=data.content?.[0]?.text||'抱歉，無法取得回應';
+    aiHistory.push({role:'assistant',content:reply});
+    loadingDiv.querySelector('.ai-bubble').innerHTML=reply.replace(/\n/g,'<br>');
+    document.getElementById('ai-messages').scrollTop=9999;
+  }catch(e){
+    loadingDiv.querySelector('.ai-bubble').innerHTML='❌ 連線失敗：'+e.message;
+  }
+}
+
+function renderAIPrediction(){
+  const ac=allCases();
+  const pending=ac.filter(c=>!['已成交','未成交'].includes(c.status));
+  // 簡單預測：依狀態給不同成交機率
+  const prob={'詢價中':0.15,'報價中':0.35,'議價中':0.65,'暫緩':0.08};
+  const predicted=pending.reduce((a,c)=>a+(c.est*(prob[c.status]||0.2)),0);
+  const wonAmt=ac.filter(c=>c.status==='已成交').reduce((a,c)=>a+c.est,0);
+  const confidence=Math.min(Math.round(predicted/Math.max(wonAmt,1)*50+30),92);
+
+  // 7天內到期
+  const today=new Date(); today.setHours(0,0,0,0);
+  const urgent=pending.filter(c=>{
+    if(!c.date) return false;
+    const dt=new Date(c.date.replace(/\//g,'-'));
+    return Math.ceil((dt-today)/(1000*60*60*24))<=14;
+  });
+
+  document.getElementById('ai-prediction').innerHTML=`
+    <div style="text-align:center;margin-bottom:14px">
+      <div style="font-size:11px;color:#94a3b8;margin-bottom:2px">預測下月可成交金額</div>
+      <div style="font-size:24px;font-weight:900;color:#7c3aed">${fmt(Math.round(predicted))} 元</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">信心指數</div>
+      <div class="predict-bar"><div class="predict-fill" style="width:${confidence}%"></div></div>
+      <div style="font-size:12px;font-weight:700;color:#2563eb">${confidence}%</div>
+    </div>
+    <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">依案件階段預估：</div>
+    ${Object.entries(prob).map(([status,p])=>{
+      const cases=pending.filter(c=>c.status===status);
+      if(!cases.length) return '';
+      const est=cases.reduce((a,c)=>a+c.est,0);
+      return`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f8fafc">
+        <span>${status}（${cases.length}件）</span>
+        <span style="color:#7c3aed;font-weight:700">≈${fmt(Math.round(est*p))}</span>
+      </div>`;
+    }).join('')}
+    ${urgent.length?`<div style="background:#fef9c3;border-radius:7px;padding:8px 10px;margin-top:10px;font-size:11px;color:#a16207;font-weight:600">⚠️ ${urgent.length} 件案件 14 天內到期，共 ${fmt(urgent.reduce((a,c)=>a+c.est,0))} 元</div>`:''}
+    <button onclick="askAI('根據目前的案件資料，給我詳細的下月業績預測與建議')" 
+      style="width:100%;margin-top:10px;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;cursor:pointer;font-weight:700;font-size:12px;font-family:inherit">
+      🤖 讓 AI 詳細分析
+    </button>`;
+}
+
+// add contact-modal to closer
+['contact-modal'].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('show');});
+});
+
+
+// ═══════════════════════════════════════════════
+// GOTO PATCH v3 — tools
+// ═══════════════════════════════════════════════
+const _goto3_orig = goto;
+function goto(page){
+  if(page!=='detail') prevPage=currentPage;
+  currentPage=page;
+  const pages=['map','dealers','cases','sales','detail','visits','goals','leaderboard','cardwall','aichat','tools'];
+  pages.forEach(p=>{const el=document.getElementById('pg-'+p);if(el)el.style.display=p===page?'block':'none';});
+  document.querySelectorAll('.nav-btn').forEach(b=>{
+    const t=b.textContent.trim();
+    b.classList.toggle('active',
+      (t==='🗺️ 地圖'&&page==='map')||
+      (t==='🏢 經銷商'&&page==='dealers')||(t==='📋 案件總覽'&&page==='cases')||
+      (t==='👤 業務人員'&&page==='sales')||(t==='📅 拜訪記錄'&&page==='visits')||
+      (t==='🎯 業績目標'&&page==='goals')||(t==='🏆 排行榜'&&page==='leaderboard')||
+      (t==='📱 名片牆'&&page==='cardwall')||(t==='🤖 AI 分析'&&page==='aichat')||
+      (t==='🛠️ 業務工具'&&page==='tools'));
+  });
+  // Map needs special layout
+  const mainEl=document.getElementById('main');
+  const sidebarEl=document.getElementById('sidebar');
+  if(page==='map'){
+    document.getElementById('pg-map').style.display='block';
+    if(mainEl){mainEl.style.padding='0';mainEl.style.position='relative';mainEl.style.overflow='hidden';}
+    if(sidebarEl) sidebarEl.style.display='flex';
+    setTimeout(()=>{ renderMap(); },50);
+  } else {
+    if(mainEl){mainEl.style.padding='20px 24px';mainEl.style.position='';mainEl.style.overflow='auto';}
+    if(sidebarEl) sidebarEl.style.display='none';
+  }
+  if(page==='dealers')      renderDealers();
+  if(page==='cases')        renderAllCases();
+  if(page==='sales')        renderSales();
+  if(page==='detail')       renderDetail();
+  if(page==='visits')       renderVisits();
+  if(page==='goals')        renderGoals();
+  if(page==='leaderboard')  renderLeaderboard();
+  if(page==='cardwall')     renderCardWall();
+  if(page==='aichat')       initAIChat();
+  if(page==='tools')        initTools();
+  saveData();
+}
+
+// ═══════════════════════════════════════════════
+// 🛠️ TOOLS INIT
+// ═══════════════════════════════════════════════
+function initTools(){
+  // populate selects
+  const allAC = allCases();
+  const emCase = document.getElementById('em-case');
+  if(emCase) emCase.innerHTML='<option value="">請選擇案件</option>'+
+    allAC.map(c=>`<option value="${c.id}_${c.dealerId}">${c.dealerName} — ${c.name}（${fmt(c.est)}）</option>`).join('');
+
+  const mnVisit = document.getElementById('mn-visit');
+  if(mnVisit){
+    mnVisit.innerHTML='<option value="">手動輸入</option>'+
+      [...visits].sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')))
+        .map(v=>{const d=dealers.find(x=>x.id===v.dealerId);return`<option value="${v.id}">${v.date} — ${d?.name||''} — ${v.subject}</option>`;}).join('');
+    document.getElementById('mn-date').value=new Date().toISOString().split('T')[0];
+  }
+
+  const rpDealer=document.getElementById('rp-dealer');
+  if(rpDealer) rpDealer.innerHTML='<option value="">選擇經銷商</option>'+dealers.map(d=>`<option value="${d.id}">${d.name}</option>`).join('');
+
+  const qtTo=document.getElementById('qt-to');
+  if(qtTo) qtTo.innerHTML='<option value="">請選擇或輸入</option>'+dealers.map(d=>`<option value="${d.id}">${d.name}${d.contact?' ('+d.contact+')':''}</option>`).join('');
+  if(document.getElementById('qt-date')) document.getElementById('qt-date').value=new Date().toISOString().split('T')[0];
+  if(document.getElementById('qt-no')) document.getElementById('qt-no').value='QT-'+new Date().getFullYear()+'-'+String(Math.floor(Math.random()*900)+100);
+
+  // init quote items if empty
+  if(!quoteItems.length){ quoteItems=[{name:'',spec:'',qty:1,unit:'台',price:0}]; }
+  renderQuoteItemsEditor();
+}
+
+function showTool(name){
+  ['email','minutes','report','quote','forecast'].forEach(t=>{
+    document.getElementById('tool-'+t).style.display = t===name?'block':'none';
+  });
+  document.getElementById('tools-home').style.display = name?'none':'grid';
+  if(name==='quote') renderQuoteItemsEditor();
+}
+
+function copyOutput(id){
+  const el=document.getElementById(id);
+  const text=el.innerText||el.textContent;
+  navigator.clipboard.writeText(text).then(()=>toast('✅ 已複製到剪貼簿'));
+}
+
+// ═══════════════════════════════════════════════
+// 📧 EMAIL GENERATOR
+// ═══════════════════════════════════════════════
+function updateEmailDealer(){
+  const val=document.getElementById('em-case').value;
+  if(!val) return;
+  const [cid,did]=val.split('_');
+  const d=dealers.find(x=>x.id===parseInt(did));
+  if(d&&d.contact) document.getElementById('em-title').value=d.contact;
+}
+
+async function generateEmail(){
+  const val=document.getElementById('em-case').value;
+  if(!val){toast('請先選擇案件');return;}
+  const [cid,did]=val.split('_');
+  const d=dealers.find(x=>x.id===parseInt(did));
+  const ac=allCases().find(c=>c.id===parseInt(cid));
+  if(!d||!ac){toast('找不到案件資料');return;}
+
+  const toName=document.getElementById('em-title').value||d.contact||'您好';
+  const type=document.getElementById('em-type').value;
+  const extra=document.getElementById('em-note').value;
+
+  const typeDesc={
+    followup:'報價後跟進確認，詢問客戶是否有問題，推進到下一步',
+    first:'首次拜訪後的感謝信，表達合作意願，附上簡單介紹',
+    urgent:'案件截止日快到，友善但有急迫感的催促確認信',
+    won:'已成交，感謝合作，確認後續流程',
+    intro:'產品介紹開發信，吸引對方有興趣進一步了解',
+  }[type];
+
+  const today=new Date().toLocaleDateString('zh-TW');
+  const myVisits=visits.filter(v=>v.dealerId===d.id).sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')));
+  const lastVisit=myVisits[0];
+
+  document.getElementById('em-loading').style.display='block';
+  document.getElementById('em-output').innerText='';
+  document.getElementById('em-subject-wrap').style.display='none';
+
+  const prompt=`你是一位專業的業務代表，請用繁體中文撰寫一封${typeDesc}的 Email。
+
+【收件人資訊】
+公司：${d.name}
+聯絡人：${toName}
+縣市：${d.city}
+合作狀態：${d.status}
+
+【案件資訊】
+案件名稱：${ac.name}
+預計金額：${ac.est.toLocaleString()} 元
+案件狀態：${ac.status}
+截止日期：${ac.date||'未設定'}
+採購品項：${(ac.items||[]).join('、')||'未填寫'}
+備註：${ac.note||'無'}
+
+${lastVisit?`【最近拜訪記錄】
+日期：${lastVisit.date}
+討論內容：${lastVisit.content||lastVisit.subject}
+客戶反應：${lastVisit.reaction||'未記錄'}`:''}
+
+${extra?`【特別說明】${extra}`:''}
+
+【要求】
+1. 稱呼：${toName} 您好
+2. 語氣：專業、友善、有誠意
+3. 長度：200~350 字
+4. 結尾：敬祝 商祺，簽名用「業務部 敬上」
+5. 請先輸出主旨（格式：主旨：XXXX），再空一行輸出信件內容`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const text=(data.content?.[0]?.text||'').trim();
+    // Parse subject
+    const lines=text.split('\n');
+    let subject='',body='';
+    if(lines[0].startsWith('主旨：')||lines[0].startsWith('主旨:')){
+      subject=lines[0].replace(/^主旨[：:]/,'').trim();
+      body=lines.slice(2).join('\n').trim();
+    } else { body=text; }
+    document.getElementById('em-loading').style.display='none';
+    if(subject){
+      document.getElementById('em-subject').textContent=subject;
+      document.getElementById('em-subject-wrap').style.display='block';
+    }
+    document.getElementById('em-output').innerText=body;
+  }catch(e){
+    document.getElementById('em-loading').style.display='none';
+    toast('❌ 產生失敗：'+e.message);
+  }
+}
+
+function copyEmailToClipboard(){
+  const subj=document.getElementById('em-subject').textContent;
+  const body=document.getElementById('em-output').innerText;
+  const full=(subj?'主旨：'+subj+'\n\n':'')+body;
+  navigator.clipboard.writeText(full).then(()=>toast('✅ 已複製完整信件（主旨＋內文）'));
+}
+
+// ═══════════════════════════════════════════════
+// 📋 MEETING MINUTES
+// ═══════════════════════════════════════════════
+function fillMinutesFromVisit(){
+  const vid=parseInt(document.getElementById('mn-visit').value);
+  if(!vid) return;
+  const v=visits.find(x=>x.id===vid);
+  if(!v) return;
+  const d=dealers.find(x=>x.id===v.dealerId);
+  document.getElementById('mn-date').value=v.date.replace(/\//g,'-');
+  document.getElementById('mn-attendees').value=(d?.contact||'')+(v.contact&&v.contact!==d?.contact?'、'+v.contact:'')+(v.salesId?'、'+salesName(v.salesId):'');
+  document.getElementById('mn-keywords').value=`拜訪 ${d?.name||''}\n主題：${v.subject||''}\n${v.content||''}\n反應：${v.reaction||''}`;
+  document.getElementById('mn-actions').value=v.actions||'';
+}
+
+async function generateMinutes(){
+  const kw=document.getElementById('mn-keywords').value.trim();
+  if(!kw){toast('請輸入討論重點');return;}
+  const date=document.getElementById('mn-date').value.replace(/-/g,'/');
+  const attendees=document.getElementById('mn-attendees').value;
+  const actions=document.getElementById('mn-actions').value;
+  document.getElementById('mn-loading').style.display='block';
+  document.getElementById('mn-output').innerText='';
+
+  const prompt=`請根據以下關鍵字，整理成一份正式的拜訪會議記錄，用繁體中文。
+
+日期：${date}
+出席人員：${attendees||'（請補充）'}
+討論關鍵字：
+${kw}
+後續行動事項：${actions||'（請補充）'}
+
+請以以下格式輸出：
+
+【會議記錄】
+日期：
+出席人員：
+地點：（根據內容推測）
+
+一、討論事項
+（整理3~5點重點，條列式）
+
+二、決議事項
+（整理已確定的事項）
+
+三、後續行動事項
+（列出 Who / What / When）
+
+四、備註
+（其他注意事項）
+
+語氣正式，適合存檔或轉寄給對方確認。`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:900,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    document.getElementById('mn-loading').style.display='none';
+    document.getElementById('mn-output').innerText=(data.content?.[0]?.text||'').trim();
+  }catch(e){
+    document.getElementById('mn-loading').style.display='none';
+    toast('❌ 產生失敗：'+e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// 📊 DEALER REPORT
+// ═══════════════════════════════════════════════
+function generateReport(){
+  const did=parseInt(document.getElementById('rp-dealer').value);
+  if(!did){document.getElementById('rp-output').innerHTML='<div style="text-align:center;color:#cbd5e1;padding:40px">請選擇經銷商產生報表</div>';return;}
+  const d=dealers.find(x=>x.id===did);
+  if(!d) return;
+  const cases=dealerCases(did);
+  const est=caseEst(did);
+  const won=cases.filter(c=>c.status==='已成交');
+  const wonAmt=won.reduce((a,c)=>a+(c.actual||c.est),0);
+  const myVisits=visits.filter(v=>v.dealerId===did).sort((a,b)=>new Date(b.date.replace(/\//g,'-'))-new Date(a.date.replace(/\//g,'-')));
+  const salesNames=(d.salesIds||[]).map(id=>salesName(id)).filter(Boolean);
+  const today=new Date().toLocaleDateString('zh-TW');
+  const STATUS_COLOR_RPT={'合作中':'#16a34a','洽談中':'#2563eb','待開發':'#d97706','已結束':'#94a3b8'};
+
+  document.getElementById('rp-output').innerHTML=`
+    <div style="border-bottom:4px solid #1e3a5f;margin-bottom:24px;padding-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end">
+      <div>
+        <div style="font-size:11px;color:#94a3b8;letter-spacing:2px;margin-bottom:4px">DEALER PERFORMANCE REPORT</div>
+        <div style="font-size:26px;font-weight:900;color:#0f172a">${d.name}</div>
+        <div style="display:flex;gap:12px;margin-top:6px;font-size:13px;color:#64748b">
+          <span>📍 ${d.city}</span>
+          ${d.contact?`<span>👤 ${d.contact}</span>`:''}
+          ${d.phone?`<span>📞 ${d.phone}</span>`:''}
+          <span>加入：${d.joined}</span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:#94a3b8">報表日期</div>
+        <div style="font-size:14px;font-weight:700">${today}</div>
+        <div style="margin-top:6px"><span style="background:${STATUS_COLOR_RPT[d.status]||'#64748b'};color:#fff;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700">${d.status}</span></div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
+      ${[['本月業績',d.monthly>0?fmt(d.monthly)+' 元':'—','#2563eb'],['案件總數',cases.length+' 件','#7c3aed'],['預計總額',est>0?fmt(est)+' 元':'—','#f59e0b'],['已成交',wonAmt>0?fmt(wonAmt)+' 元':'—','#16a34a']].map(([l,v,c])=>`
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;border-top:3px solid ${c}">
+        <div style="font-size:11px;color:#94a3b8">${l}</div>
+        <div style="font-size:18px;font-weight:900;color:${c};margin-top:4px">${v}</div>
+      </div>`).join('')}
+    </div>
+
+    ${salesNames.length?`<div style="margin-bottom:20px"><div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">👤 負責業務</div>
+      <div style="display:flex;gap:8px">${salesNames.map(n=>`<span style="background:#eff6ff;color:#2563eb;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:700">${n}</span>`).join('')}</div></div>`:''}
+
+    <div style="margin-bottom:24px">
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:8px">📋 案件列表</div>
+      ${cases.length?`<table class="q-table">
+        <thead><tr><th>案件名稱</th><th>狀態</th><th>負責業務</th><th>預計金額</th><th>實際金額</th><th>截止日期</th></tr></thead>
+        <tbody>${cases.map(c=>`<tr>
+          <td style="font-weight:700">${c.name}</td>
+          <td><span style="font-size:11px;padding:2px 8px;border-radius:12px;background:${{'已成交':'#dcfce7','報價中':'#dbeafe','詢價中':'#dbeafe','議價中':'#fef9c3','未成交':'#fef2f2','暫緩':'#f1f5f9'}[c.status]||'#f1f5f9'};color:#1e293b;font-weight:700">${c.status}</span></td>
+          <td style="color:#64748b">${salesName(c.salesId)}</td>
+          <td style="font-weight:700;color:#7c3aed">${c.est>0?fmt(c.est)+' 元':'—'}</td>
+          <td style="font-weight:700;color:#16a34a">${c.actual>0?fmt(c.actual)+' 元':'—'}</td>
+          <td style="color:#64748b;font-size:12px">${c.date||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>`:'<div style="color:#cbd5e1;font-size:13px">尚無案件</div>'}
+    </div>
+
+    ${myVisits.length?`<div>
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:8px">📅 拜訪記錄（近 5 筆）</div>
+      ${myVisits.slice(0,5).map(v=>`<div style="border-left:3px solid #2563eb;padding:8px 14px;margin-bottom:8px;background:#f8fafc;border-radius:0 8px 8px 0">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;margin-bottom:3px"><span>${v.date}</span><span>${v.reaction||''}</span></div>
+        <div style="font-size:13px;font-weight:700">${v.subject}</div>
+        ${v.content?`<div style="font-size:12px;color:#64748b;margin-top:3px">${v.content}</div>`:''}
+      </div>`).join('')}
+    </div>`:''}
+    <div style="margin-top:28px;padding-top:14px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8">
+      <span>本報表由系統自動產生｜${today}</span><span>CONFIDENTIAL</span>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// 📄 QUOTE GENERATOR
+// ═══════════════════════════════════════════════
+let quoteItems=[{name:'',spec:'',qty:1,unit:'台',price:0}];
+
+function addQuoteItem(){
+  quoteItems.push({name:'',spec:'',qty:1,unit:'台',price:0});
+  renderQuoteItemsEditor();
+}
+function removeQuoteItem(i){
+  quoteItems.splice(i,1);
+  if(!quoteItems.length) quoteItems=[{name:'',spec:'',qty:1,unit:'台',price:0}];
+  renderQuoteItemsEditor();
+}
+function readQuoteItems(){
+  quoteItems=Array.from(document.querySelectorAll('.qt-item-row')).map(row=>({
+    name:row.querySelector('.qt-name').value,
+    spec:row.querySelector('.qt-spec').value,
+    qty:parseFloat(row.querySelector('.qt-qty').value)||1,
+    unit:row.querySelector('.qt-unit').value||'台',
+    price:parseFloat(row.querySelector('.qt-price').value)||0,
+  }));
+}
+function renderQuoteItemsEditor(){
+  const container=document.getElementById('qt-items-editor');
+  if(!container) return;
+  container.innerHTML=quoteItems.map((item,i)=>`
+    <div class="qt-item-row" style="display:grid;grid-template-columns:2fr 2fr 0.7fr 0.7fr 1.2fr auto;gap:6px;margin-bottom:6px;align-items:center">
+      <input class="qt-name" value="${item.name}" placeholder="品名" style="padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+      <input class="qt-spec" value="${item.spec}" placeholder="規格/說明" style="padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit">
+      <input class="qt-qty" type="number" value="${item.qty}" min="1" style="padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;text-align:center">
+      <input class="qt-unit" value="${item.unit}" placeholder="單位" style="padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;text-align:center">
+      <input class="qt-price" type="number" value="${item.price||''}" placeholder="單價" style="padding:7px 9px;border-radius:7px;border:1.5px solid #e2e8f0;font-size:13px;outline:none;font-family:inherit;text-align:right">
+      <button onclick="removeQuoteItem(${i})" class="rm-btn">✕</button>
+    </div>`).join('');
+}
+function renderQuote(){
+  readQuoteItems();
+  const did=parseInt(document.getElementById('qt-to').value);
+  const d=dealers.find(x=>x.id===did);
+  const toName=d?d.name:document.getElementById('qt-to').options[document.getElementById('qt-to').selectedIndex]?.text||'';
+  const contact=document.getElementById('qt-contact').value;
+  const qtNo=document.getElementById('qt-no').value;
+  const qtDate=document.getElementById('qt-date').value.replace(/-/g,'/');
+  const valid=document.getElementById('qt-valid').value;
+  const payment=document.getElementById('qt-payment').value;
+  const note=document.getElementById('qt-note').value;
+  const subtotal=quoteItems.reduce((a,item)=>a+item.qty*item.price,0);
+  const tax=Math.round(subtotal*0.05);
+  const total=subtotal+tax;
+
+  document.getElementById('qt-preview').innerHTML=`
+    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#2563eb);padding:20px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:22px;font-weight:900;letter-spacing:1px">報 價 單</div><div style="font-size:12px;opacity:.7;margin-top:2px">QUOTATION</div></div>
+        <div style="text-align:right;font-size:12px;opacity:.85"><div>報價編號：${qtNo||'—'}</div><div>日期：${qtDate}</div>${valid?`<div>有效期限：${valid}</div>`:''}</div>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div style="background:#f8fafc;border-radius:8px;padding:12px 14px">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">報價對象</div>
+            <div style="font-size:15px;font-weight:800">${toName||'—'}</div>
+            ${contact?`<div style="font-size:13px;color:#64748b;margin-top:2px">聯絡人：${contact}</div>`:''}
+          </div>
+          <div style="background:#f8fafc;border-radius:8px;padding:12px 14px">
+            <div style="font-size:11px;color:#94a3b8;margin-bottom:4px">付款條件</div>
+            <div style="font-size:13px;font-weight:600">${payment||'依合約'}</div>
+          </div>
+        </div>
+        <table class="q-table" style="margin-bottom:0">
+          <thead><tr><th>#</th><th>品名</th><th>規格/說明</th><th style="text-align:center">數量</th><th style="text-align:center">單位</th><th style="text-align:right">單價</th><th style="text-align:right">小計</th></tr></thead>
+          <tbody>
+            ${quoteItems.map((item,i)=>`<tr>
+              <td style="color:#94a3b8">${i+1}</td>
+              <td style="font-weight:700">${item.name||'—'}</td>
+              <td style="color:#64748b;font-size:12px">${item.spec||'—'}</td>
+              <td style="text-align:center">${item.qty}</td>
+              <td style="text-align:center;color:#64748b">${item.unit}</td>
+              <td style="text-align:right">${item.price>0?'NT$ '+item.price.toLocaleString():'—'}</td>
+              <td style="text-align:right;font-weight:700">${item.price>0?'NT$ '+(item.qty*item.price).toLocaleString():'—'}</td>
+            </tr>`).join('')}
+            <tr style="background:#f8fafc"><td colspan="6" style="text-align:right;font-weight:700">小計</td><td style="text-align:right;font-weight:700">NT$ ${subtotal.toLocaleString()}</td></tr>
+            <tr style="background:#f8fafc"><td colspan="6" style="text-align:right;font-weight:700;color:#64748b">稅金（5%）</td><td style="text-align:right;color:#64748b">NT$ ${tax.toLocaleString()}</td></tr>
+            <tr style="background:#1e3a5f"><td colspan="6" style="text-align:right;font-weight:800;color:#fff;font-size:14px">總計</td><td style="text-align:right;font-weight:900;color:#fff;font-size:16px">NT$ ${total.toLocaleString()}</td></tr>
+          </tbody>
+        </table>
+        ${note?`<div style="margin-top:14px;background:#fef9c3;border-radius:7px;padding:10px 14px;font-size:12px;color:#a16207">📝 備註：${note}</div>`:''}
+        <div style="margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div style="text-align:center;border-top:1px solid #e2e8f0;padding-top:8px"><div style="font-size:11px;color:#94a3b8">業務簽章</div></div>
+          <div style="text-align:center;border-top:1px solid #e2e8f0;padding-top:8px"><div style="font-size:11px;color:#94a3b8">客戶確認</div></div>
+        </div>
+      </div>
+    </div>`;
+}
+
+// init quote editor div on showTool
+function showTool(name){
+  ['email','minutes','report','quote','forecast'].forEach(t=>{
+    document.getElementById('tool-'+t).style.display=t===name?'block':'none';
+  });
+  document.getElementById('tools-home').style.display=name?'none':'grid';
+  if(name==='forecast'){ setTimeout(runForecast, 100); }
+  if(name==='quote'){
+    // inject items editor if not present
+    let ed=document.getElementById('qt-items-editor');
+    if(!ed){
+      ed=document.createElement('div');
+      ed.id='qt-items-editor';
+      const noteEl=document.querySelector('#tool-quote .no-print:last-of-type input[id="qt-note"]');
+      // insert before the update button row
+      const btnRow=document.querySelector('#tool-quote .no-print > button[onclick="renderQuote()"]');
+      if(btnRow) btnRow.parentNode.insertBefore(ed,btnRow);
+    }
+    renderQuoteItemsEditor();
+  }
+}
+
+
+// ═══════════════════════════════════════════════
+// 🔮 FORECAST ENGINE
+// ═══════════════════════════════════════════════
+function syncFromSystem(){
+  const active = dealers.filter(d=>d.status==='合作中');
+  document.getElementById('fc-existing').value = active.length;
+  document.getElementById('fc-ex-val').textContent = active.length;
+  if(active.length > 0){
+    const avgRev = Math.round(active.reduce((a,d)=>a+d.monthly,0) / active.length * 12 / 10000);
+    document.getElementById('fc-existing-rev').value = Math.max(avgRev, 10);
+    document.getElementById('fc-exr-val').textContent = Math.max(avgRev, 10);
+  }
+  // 自動算剩餘週數
+  const now = new Date();
+  const yearEnd = new Date(now.getFullYear(), 11, 31);
+  const weeksLeft = Math.max(1, Math.round((yearEnd - now) / (7*24*60*60*1000)));
+  document.getElementById('fc-weeks-left').value = Math.min(weeksLeft, 52);
+  document.getElementById('fc-wl-val').textContent = Math.min(weeksLeft, 52);
+  runForecast();
+  toast('✅ 已從系統帶入 ' + active.length + ' 家合作中經銷商');
+}
+
+function runForecast(){
+  const visitsPerWeek  = parseInt(document.getElementById('fc-visits-week').value) || 5;
+  const weeksLeft      = parseInt(document.getElementById('fc-weeks-left').value)  || 32;
+  const revenuePerDealer = parseInt(document.getElementById('fc-revenue').value)   || 100; // 萬/年
+  const winRate        = parseInt(document.getElementById('fc-rate').value)        || 20;  // %
+  const rampupMonths   = parseInt(document.getElementById('fc-rampup').value)      || 2;
+  const existingCount  = parseInt(document.getElementById('fc-existing').value)    || 0;
+  const existingRev    = parseInt(document.getElementById('fc-existing-rev').value)|| 100; // 萬/年
+
+  const totalVisits    = visitsPerWeek * weeksLeft;
+  const newDealers     = Math.floor(totalVisits * winRate / 100);
+  const monthsLeft     = weeksLeft / 4.33;
+
+  // 現有基礎業績（剩餘月份）
+  const baseRevenue = existingCount * existingRev * (monthsLeft / 12);
+
+  // 新經銷商業績：每家在 rampup 後才開始貢獻
+  // 假設開發均勻分布在這段期間
+  let newRevenue = 0;
+  for(let i = 0; i < newDealers; i++){
+    // 第 i 家平均在第 (i/newDealers * monthsLeft) 個月成交
+    const dealMonth = (i / Math.max(newDealers-1,1)) * monthsLeft;
+    const activeMonths = Math.max(0, monthsLeft - dealMonth - rampupMonths);
+    newRevenue += (revenuePerDealer / 12) * activeMonths;
+  }
+
+  const total = Math.round(baseRevenue + newRevenue);
+  const totalBase = Math.round(baseRevenue);
+  const totalNew  = Math.round(newRevenue);
+
+  // 更新主數字
+  document.getElementById('fc-total-display').textContent = total.toLocaleString();
+  document.getElementById('fc-new-dealers').textContent   = newDealers;
+  document.getElementById('fc-new-rev').textContent       = Math.round(totalNew).toLocaleString();
+  document.getElementById('fc-base-rev').textContent      = Math.round(totalBase).toLocaleString();
+
+  // 月份分布圖
+  renderForecastChart(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev);
+
+  // 三種情境
+  renderScenarios(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev);
+
+  // 即時 AI 建議（不呼叫 API，本地計算）
+  renderLocalAdvice(visitsPerWeek, weeksLeft, newDealers, winRate, rampupMonths, total, existingCount);
+}
+
+function calcMonthlyForecast(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev){
+  const monthsLeft = weeksLeft / 4.33;
+  const totalVisits = visitsPerWeek * weeksLeft;
+  const newDealers = Math.floor(totalVisits * winRate / 100);
+  const months = [];
+  const now = new Date();
+
+  for(let m = 0; m < Math.ceil(monthsLeft); m++){
+    // 基礎業績
+    const base = existingCount * existingRev / 12;
+    // 新業績：到第 m 個月為止已成交的經銷商貢獻
+    const dealersSoFar = Math.floor(newDealers * (m / monthsLeft));
+    let newRev = 0;
+    for(let i = 0; i < dealersSoFar; i++){
+      const dealMonth = (i / Math.max(newDealers-1,1)) * monthsLeft;
+      const activeM = Math.max(0, m - dealMonth - rampupMonths);
+      if(activeM > 0) newRev += revenuePerDealer / 12;
+    }
+    const label = new Date(now.getFullYear(), now.getMonth()+m, 1)
+      .toLocaleDateString('zh-TW',{month:'short'});
+    months.push({label, base: Math.round(base), new: Math.round(newRev), total: Math.round(base+newRev)});
+  }
+  return months;
+}
+
+function renderForecastChart(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev){
+  const months = calcMonthlyForecast(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev);
+  const maxVal = Math.max(...months.map(m=>m.total), 1);
+  const chart = document.getElementById('fc-chart');
+  const labels = document.getElementById('fc-chart-labels');
+
+  chart.innerHTML = months.map((m,i)=>{
+    const totalH = Math.round((m.total/maxVal)*120);
+    const baseH  = Math.round((m.base/maxVal)*120);
+    const newH   = Math.max(0, totalH - baseH);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:0;position:relative" title="${m.label}: ${m.total}萬元">
+      <div style="font-size:9px;color:#7c3aed;font-weight:700;margin-bottom:2px">${m.total>0?m.total:''}</div>
+      <div style="width:100%;display:flex;flex-direction:column;justify-content:flex-end;height:120px">
+        <div style="width:100%;height:${newH}px;background:linear-gradient(180deg,#7c3aed,#a78bfa);border-radius:3px 3px 0 0;transition:height .6s"></div>
+        <div style="width:100%;height:${baseH}px;background:linear-gradient(180deg,#2563eb,#60a5fa);transition:height .6s"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  labels.innerHTML = months.map(m=>`<div style="flex:1;text-align:center">${m.label}</div>`).join('');
+
+  // 加圖例
+  chart.insertAdjacentHTML('beforebegin',`<div style="display:flex;gap:14px;font-size:11px;color:#64748b;margin-bottom:8px">
+    <span><span style="display:inline-block;width:10px;height:10px;background:#2563eb;border-radius:2px;margin-right:3px"></span>現有基礎</span>
+    <span><span style="display:inline-block;width:10px;height:10px;background:#7c3aed;border-radius:2px;margin-right:3px"></span>新開發</span>
+  </div>`);
+}
+
+function renderScenarios(visitsPerWeek, weeksLeft, revenuePerDealer, winRate, rampupMonths, existingCount, existingRev){
+  // 悲觀 / 基準 / 樂觀
+  const scenarios = [
+    {name:'😟 悲觀', rate: Math.max(5, winRate-10), color:'#dc2626', bg:'#fef2f2'},
+    {name:'📊 基準', rate: winRate,                  color:'#2563eb', bg:'#eff6ff'},
+    {name:'🚀 樂觀', rate: Math.min(80, winRate+15), color:'#16a34a', bg:'#f0fdf4'},
+  ];
+  const monthsLeft = weeksLeft / 4.33;
+  const base = existingCount * existingRev * (monthsLeft/12);
+
+  document.getElementById('fc-scenarios').innerHTML = scenarios.map(s=>{
+    const newDealers = Math.floor(visitsPerWeek * weeksLeft * s.rate / 100);
+    let newRev = 0;
+    for(let i=0;i<newDealers;i++){
+      const dealMonth=(i/Math.max(newDealers-1,1))*monthsLeft;
+      const activeM=Math.max(0,monthsLeft-dealMonth-rampupMonths);
+      newRev += (revenuePerDealer/12)*activeM;
+    }
+    const total = Math.round(base + newRev);
+    const pct = s.rate;
+    return `<div style="background:${s.bg};border-radius:10px;padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">
+      <div style="flex-shrink:0">
+        <div style="font-size:13px;font-weight:700;color:${s.color}">${s.name}</div>
+        <div style="font-size:11px;color:#94a3b8">成交率 ${pct}%</div>
+      </div>
+      <div style="flex:1;height:8px;background:rgba(0,0,0,0.06);border-radius:99px;overflow:hidden">
+        <div style="height:100%;background:${s.color};width:${Math.min(100,total/Math.max(1,Math.round(base+visitsPerWeek*weeksLeft*0.4*(revenuePerDealer/12)*(monthsLeft/2)))*100)}%;border-radius:99px;transition:width .8s"></div>
+      </div>
+      <div style="font-size:18px;font-weight:900;color:${s.color};min-width:80px;text-align:right">${total.toLocaleString()} 萬</div>
+    </div>`;
+  }).join('');
+}
+
+function renderLocalAdvice(visitsPerWeek, weeksLeft, newDealers, winRate, rampupMonths, total, existingCount){
+  const tips = [];
+  if(winRate < 20) tips.push(`⚠️ 成交率 ${winRate}% 偏低，建議加強拜訪前的資料準備，了解客戶需求再出擊`);
+  if(visitsPerWeek >= 7) tips.push(`💪 每週 ${visitsPerWeek} 家拜訪量很高，注意拜訪品質，別只追求數量`);
+  if(visitsPerWeek < 3) tips.push(`📈 每週 ${visitsPerWeek} 家拜訪量偏低，若能提升到 5 家，業績可增加約 ${Math.round(total*(5-visitsPerWeek)/visitsPerWeek*0.6)} 萬`);
+  if(rampupMonths >= 3) tips.push(`⏱️ ${rampupMonths} 個月的導入期較長，建議優先拜訪有立即採購需求的客戶`);
+  if(existingCount === 0) tips.push(`🔄 尚未帶入現有經銷商資料，點擊「從系統帶入」可得到更準確的預測`);
+  if(newDealers > 0) tips.push(`🎯 預計新開發 ${newDealers} 家，建議優先鎖定 ${Math.ceil(newDealers*1.5)} 家目標客戶（多 50% buffer）`);
+  const advice = tips.length ? tips.join('<br><br>') : `✅ 參數設定合理，保持每週 ${visitsPerWeek} 家的拜訪節奏，預計到年底可達成 ${total.toLocaleString()} 萬元業績！`;
+  document.getElementById('fc-ai-advice').innerHTML = advice;
+}
+
+async function getAIForecastAdvice(){
+  const visitsPerWeek  = parseInt(document.getElementById('fc-visits-week').value);
+  const weeksLeft      = parseInt(document.getElementById('fc-weeks-left').value);
+  const revenuePerDealer = parseInt(document.getElementById('fc-revenue').value);
+  const winRate        = parseInt(document.getElementById('fc-rate').value);
+  const rampupMonths   = parseInt(document.getElementById('fc-rampup').value);
+  const existingCount  = parseInt(document.getElementById('fc-existing').value);
+  const total          = document.getElementById('fc-total-display').textContent;
+
+  document.getElementById('fc-ai-loading').style.display='block';
+  document.getElementById('fc-ai-advice').innerHTML='';
+
+  const prompt=`我是一位業務人員，以下是我的業務狀況：
+
+- 每週拜訪 ${visitsPerWeek} 家經銷商
+- 到年底還有 ${weeksLeft} 週
+- 每家經銷商年貢獻約 ${revenuePerDealer} 萬元
+- 目前成交率約 ${winRate}%
+- 從合作到第一筆收入需要 ${rampupMonths} 個月
+- 目前已有 ${existingCount} 家合作中的經銷商
+- 系統預測到年底約 ${total} 萬元業績
+
+請給我 3~5 個具體可行的業務策略建議，幫助我提升業績。
+重點：
+1. 如何提升成交率
+2. 如何加速導入期
+3. 優先拜訪哪類型的客戶
+4. 如何維護現有經銷商關係
+請用繁體中文，條列式，每點要具體可操作，不要太籠統。`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:700,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    document.getElementById('fc-ai-loading').style.display='none';
+    document.getElementById('fc-ai-advice').innerHTML=(data.content?.[0]?.text||'').replace(/\n/g,'<br>');
+  }catch(e){
+    document.getElementById('fc-ai-loading').style.display='none';
+    document.getElementById('fc-ai-advice').innerHTML='❌ 請稍後再試';
+  }
+}
+
+// 初始化 forecast
+setTimeout(()=>{
+  const now=new Date();
+  const yearEnd=new Date(now.getFullYear(),11,31);
+  const weeksLeft=Math.max(1,Math.round((yearEnd-now)/(7*24*60*60*1000)));
+  const el=document.getElementById('fc-weeks-left');
+  if(el){ el.value=Math.min(weeksLeft,52); document.getElementById('fc-wl-val').textContent=Math.min(weeksLeft,52); }
+}, 500);
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+loadData();
+console.log('[系統] 載入完成 dealers:', dealers.length, '家');
+goto('map');
+// Auto-save every 30s
+setInterval(saveData, 30000);
+</script>
+
+<!-- CARD SCAN MODAL -->
+<div class="modal-bg" id="card-modal">
+  <div class="modal-box" style="width:640px">
+    <h3>📷 名片掃描匯入</h3>
+    <div id="card-step1">
+      <div style="text-align:center;padding:20px 0">
+        <div id="card-drop-zone" 
+          style="border:2.5px dashed #cbd5e1;border-radius:14px;padding:40px 20px;cursor:pointer;transition:all .2s;background:#f8fafc"
+          onclick="document.getElementById('card-file-input').click()"
+          ondragover="event.preventDefault();this.style.borderColor='#2563eb';this.style.background='#eff6ff'"
+          ondragleave="this.style.borderColor='#cbd5e1';this.style.background='#f8fafc'"
+          ondrop="handleCardDrop(event)">
+          <div style="font-size:48px;margin-bottom:12px">📇</div>
+          <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px">點擊或拖曳名片照片到此處</div>
+          <div style="font-size:12px;color:#94a3b8">支援 JPG、PNG、HEIC 等格式</div>
+          <div style="margin-top:16px">
+            <span style="background:#2563eb;color:#fff;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700">選擇照片</span>
+          </div>
+        </div>
+        <input type="file" id="card-file-input" accept="image/*" style="display:none" onchange="handleCardFile(this)">
+      </div>
+      <div id="card-preview" style="display:none;margin-top:12px;text-align:center">
+        <img id="card-img" style="max-width:100%;max-height:200px;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,0.12)"/>
+        <div style="margin-top:12px">
+          <button onclick="analyzeCard()" id="analyze-btn"
+            style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;border:none;border-radius:9px;padding:11px 28px;cursor:pointer;font-weight:800;font-size:14px;font-family:inherit;box-shadow:0 3px 10px rgba(37,99,235,0.4)">
+            🤖 AI 自動辨識名片
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI 分析中 -->
+    <div id="card-loading" style="display:none;text-align:center;padding:30px">
+      <div style="font-size:36px;margin-bottom:12px" id="card-loading-icon">🔍</div>
+      <div style="font-size:15px;font-weight:700;color:#1e293b" id="card-loading-text">AI 正在辨識名片...</div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:6px">通常需要 3~5 秒</div>
+      <div style="margin-top:16px;height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden">
+        <div id="card-progress" style="height:100%;background:linear-gradient(90deg,#2563eb,#60a5fa);border-radius:99px;width:0%;transition:width .3s"></div>
+      </div>
+    </div>
+
+    <!-- 辨識結果 + 確認填入 -->
+    <div id="card-result" style="display:none">
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">✅</span>
+        <div>
+          <div style="font-weight:700;font-size:14px;color:#15803d">辨識完成！請確認資料是否正確</div>
+          <div style="font-size:12px;color:#16a34a">可以直接編輯修正後再匯入</div>
+        </div>
+      </div>
+      <div class="mg-grid">
+        <div class="mg mg-full"><label>公司名稱</label><input id="cr-company" placeholder="辨識結果"/></div>
+        <div class="mg"><label>姓名</label><input id="cr-name" placeholder="辨識結果"/></div>
+        <div class="mg"><label>職稱</label><input id="cr-title" placeholder="辨識結果"/></div>
+        <div class="mg"><label>電話</label><input id="cr-phone" placeholder="辨識結果"/></div>
+        <div class="mg"><label>手機</label><input id="cr-mobile" placeholder="辨識結果"/></div>
+        <div class="mg"><label>Email</label><input id="cr-email" placeholder="辨識結果"/></div>
+        <div class="mg"><label>地址 / 縣市</label><input id="cr-city" placeholder="辨識結果"/></div>
+        <div class="mg"><label>網站</label><input id="cr-website" placeholder="辨識結果"/></div>
+        <div class="mg mg-full"><label>備註（其他辨識內容）</label><textarea id="cr-note" rows="2" placeholder="其他名片資訊"></textarea></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:4px">
+        <button onclick="resetCardScan()" class="modal-cancel">重新掃描</button>
+        <button onclick="importCardAsDealer()" 
+          style="flex:2;padding:11px;border-radius:8px;border:none;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;cursor:pointer;font-weight:800;font-size:14px;font-family:inherit;box-shadow:0 3px 10px rgba(22,163,74,0.35)">
+          ✅ 匯入為新經銷商
+        </button>
+        <button onclick="importCardAsSales()"
+          style="flex:1.5;padding:11px;border-radius:8px;border:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;cursor:pointer;font-weight:800;font-size:13px;font-family:inherit">
+          👤 匯入為業務人員
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="modal-cancel" onclick="closeModal('card')">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// 名片掃描功能
+// ═══════════════════════════════════════════════
+let cardBase64 = null;
+
+function openCardScan(){
+  resetCardScan();
+  document.getElementById('card-modal').classList.add('show');
+}
+
+function resetCardScan(){
+  cardBase64=null;
+  document.getElementById('card-step1').style.display='block';
+  document.getElementById('card-loading').style.display='none';
+  document.getElementById('card-result').style.display='none';
+  document.getElementById('card-preview').style.display='none';
+  document.getElementById('card-file-input').value='';
+}
+
+function handleCardDrop(e){
+  e.preventDefault();
+  document.getElementById('card-drop-zone').style.borderColor='#cbd5e1';
+  document.getElementById('card-drop-zone').style.background='#f8fafc';
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) loadCardFile(file);
+}
+
+function handleCardFile(input){
+  if(input.files[0]) loadCardFile(input.files[0]);
+}
+
+function loadCardFile(file){
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const dataUrl = e.target.result;
+    cardBase64 = dataUrl.split(',')[1];
+    document.getElementById('card-img').src = dataUrl;
+    document.getElementById('card-preview').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeCard(){
+  if(!cardBase64){ toast('請先選擇名片照片'); return; }
+  document.getElementById('card-step1').style.display='none';
+  document.getElementById('card-loading').style.display='block';
+  document.getElementById('card-result').style.display='none';
+
+  // 進度條動畫
+  let prog=0;
+  const timer=setInterval(()=>{
+    prog=Math.min(prog+Math.random()*15,90);
+    document.getElementById('card-progress').style.width=prog+'%';
+  },300);
+
+  const msgs=[
+    {role:'user',content:[
+      {type:'image',source:{type:'base64',media_type:'image/jpeg',data:cardBase64}},
+      {type:'text',text:`請仔細辨識這張名片上的所有文字，並以 JSON 格式回傳以下欄位（沒有的填空字串）：
+{
+  "company": "公司名稱",
+  "name": "姓名",
+  "title": "職稱",
+  "phone": "電話（含區碼）",
+  "mobile": "手機",
+  "email": "Email",
+  "address": "地址",
+  "city": "縣市（只取縣市名稱，例如：台北市）",
+  "website": "網站",
+  "note": "其他資訊（部門、傳真等）"
+}
+只回傳 JSON，不要其他說明文字。`}
+    ]}
+  ];
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:msgs
+      })
+    });
+    const data = await resp.json();
+    clearInterval(timer);
+    document.getElementById('card-progress').style.width='100%';
+
+    let text = data.content?.[0]?.text || '{}';
+    // 清除可能的 markdown code block
+    text = text.replace(/```json|```/g,'').trim();
+    let parsed={};
+    try{ parsed=JSON.parse(text); }catch(e){ parsed={note:text}; }
+
+    setTimeout(()=>{
+      document.getElementById('card-loading').style.display='none';
+      document.getElementById('card-result').style.display='block';
+      document.getElementById('cr-company').value = parsed.company||'';
+      document.getElementById('cr-name').value    = parsed.name||'';
+      document.getElementById('cr-title').value   = parsed.title||'';
+      document.getElementById('cr-phone').value   = parsed.phone||'';
+      document.getElementById('cr-mobile').value  = parsed.mobile||'';
+      document.getElementById('cr-email').value   = parsed.email||'';
+      document.getElementById('cr-city').value    = parsed.city||parsed.address||'';
+      document.getElementById('cr-website').value = parsed.website||'';
+      document.getElementById('cr-note').value    = parsed.note||'';
+    },400);
+
+  } catch(err){
+    clearInterval(timer);
+    document.getElementById('card-loading').style.display='none';
+    document.getElementById('card-step1').style.display='block';
+    document.getElementById('card-preview').style.display='block';
+    toast('❌ 辨識失敗，請重試：'+err.message);
+  }
+}
+
+function importCardAsDealer(){
+  const company = document.getElementById('cr-company').value.trim();
+  if(!company){ toast('請填寫公司名稱'); return; }
+
+  // 自動判斷縣市
+  let cityVal = document.getElementById('cr-city').value;
+  const cityNames=['台北市','新北市','基隆市','桃園市','新竹市','新竹縣','苗栗縣',
+    '台中市','彰化縣','南投縣','雲林縣','嘉義市','嘉義縣','台南市','高雄市',
+    '屏東縣','宜蘭縣','花蓮縣','台東縣','澎湖縣'];
+  let detectedCity = cityNames.find(c=>cityVal.includes(c)) || '';
+
+  dealers.push({
+    id:Date.now(),
+    name:company,
+    city:detectedCity,
+    status:'洽談中',
+    monthly:0, orders:0,
+    contact:document.getElementById('cr-name').value,
+    phone:document.getElementById('cr-phone').value||document.getElementById('cr-mobile').value,
+    salesIds:[],
+    cases:[],
+    joined:new Date().toLocaleDateString('zh-TW'),
+    email:document.getElementById('cr-email').value,
+    website:document.getElementById('cr-website').value,
+    note:document.getElementById('cr-note').value,
+  });
+
+  saveData();saveData();closeModal('card');
+  goto('dealers');
+  toast('✅ 已匯入：'+company+(detectedCity?' ('+detectedCity+')':''));
+}
+
+function importCardAsSales(){
+  const name = document.getElementById('cr-name').value.trim();
+  if(!name){ toast('請填寫姓名'); return; }
+
+  salespeople.push({
+    id:Date.now(),
+    name,
+    phone:document.getElementById('cr-mobile').value||document.getElementById('cr-phone').value,
+    email:document.getElementById('cr-email').value,
+    region:'',
+    title:document.getElementById('cr-title').value,
+    company:document.getElementById('cr-company').value,
+  });
+
+  saveData();closeModal('card');
+  goto('sales');
+  toast('✅ 已匯入業務：'+name);
+}
+</script>
+
+
+<!-- VISIT MODAL -->
+<div class="modal-bg" id="visit-modal">
+  <div class="modal-box" style="width:620px">
+    <h3 id="vm-title">📅 新增拜訪記錄</h3>
+    <div class="mg-grid">
+      <div class="mg"><label>拜訪日期 *</label><input id="vm-date" type="date"/></div>
+      <div class="mg"><label>經銷商 *</label>
+        <select id="vm-dealer"><option value="">請選擇</option></select>
+      </div>
+      <div class="mg"><label>聯絡人</label><input id="vm-contact" placeholder="例：陳經理"/></div>
+      <div class="mg"><label>負責業務</label>
+        <select id="vm-sales"><option value="">未指派</option></select>
+      </div>
+      <div class="mg mg-full"><label>拜訪主題 *</label><input id="vm-subject" placeholder="例：Q2 採購計劃討論"/></div>
+      <div class="mg mg-full"><label>談話內容</label><textarea id="vm-content" rows="3" placeholder="記錄本次拜訪談了什麼…"></textarea></div>
+      <div class="mg mg-full"><label>客戶反應 / 態度</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="ssel" onclick="setVisitReaction(this,'🔥 積極')" data-r="🔥 積極">🔥 積極</button>
+          <button class="ssel" onclick="setVisitReaction(this,'✅ 正面')" data-r="✅ 正面">✅ 正面</button>
+          <button class="ssel" onclick="setVisitReaction(this,'😐 中立')" data-r="😐 中立">😐 中立</button>
+          <button class="ssel" onclick="setVisitReaction(this,'⚠️ 觀望')" data-r="⚠️ 觀望">⚠️ 觀望</button>
+          <button class="ssel" onclick="setVisitReaction(this,'❌ 婉拒')" data-r="❌ 婉拒">❌ 婉拒</button>
+        </div>
+        <input id="vm-reaction" placeholder="或手動輸入反應…"/>
+      </div>
+      <div class="mg"><label>下次跟進日期</label><input id="vm-followup" type="date"/></div>
+      <div class="mg"><label>關聯案件</label>
+        <select id="vm-case"><option value="">不關聯</option></select>
+      </div>
+      <div class="mg mg-full"><label>📎 行動項目（下次要做的事）</label><textarea id="vm-actions" rows="2" placeholder="例：寄送報價單、安排產品 demo…"></textarea></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('visit')">取消</button>
+      <button class="modal-ok" onclick="saveVisitModal()">儲存拜訪記錄</button>
+    </div>
+  </div>
+</div>
+
+<!-- GOAL MODAL -->
+<div class="modal-bg" id="goal-modal">
+  <div class="modal-box" style="width:480px">
+    <h3 id="gm-title">🎯 設定業績目標</h3>
+    <div class="mg-grid">
+      <div class="mg"><label>目標名稱 *</label><input id="gm-name" placeholder="例：2025 Q2 業績目標"/></div>
+      <div class="mg"><label>類型</label>
+        <select id="gm-type">
+          <option value="total">整體業績</option>
+          <option value="dealer">單一經銷商</option>
+          <option value="sales">業務人員</option>
+          <option value="city">縣市</option>
+        </select>
+      </div>
+      <div class="mg"><label>目標對象</label>
+        <select id="gm-target"><option value="">整體</option></select>
+      </div>
+      <div class="mg"><label>期間</label>
+        <select id="gm-period">
+          <option>2025 Q1</option><option>2025 Q2</option><option>2025 Q3</option><option>2025 Q4</option>
+          <option>2025 全年</option><option>2026 Q1</option>
+        </select>
+      </div>
+      <div class="mg"><label>目標金額（元）*</label><input id="gm-target-amt" type="number" placeholder="例：5000000"/></div>
+      <div class="mg"><label>目前達成（元）</label><input id="gm-current" type="number" placeholder="自動計算或手動輸入"/></div>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal('goal')">取消</button>
+      <button class="modal-ok" onclick="saveGoalModal()">儲存目標</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
