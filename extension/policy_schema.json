@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "Enabled": {
+      "title": "Enable DVC Upload Guard",
+      "description": "Enable browser upload inspection and de-identification.",
+      "type": "boolean"
+    },
+    "RedactionTermsJson": {
+      "title": "DVC redaction terms",
+      "description": "JSON array of sensitive terms supplied by browser managed policy.",
+      "type": "string"
+    },
+    "ReplacementText": {
+      "title": "DVC replacement text",
+      "description": "Replacement string written into sanitized documents.",
+      "type": "string"
+    }
+  }
+}
