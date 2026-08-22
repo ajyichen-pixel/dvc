@@ -1,16 +1,20 @@
 {
   "manifest_version": 3,
   "name": "DVC Upload Guard",
-  "version": "1.0.0",
-  "description": "DVC browser upload de-identification test extension.",
+  "version": "1.1.0",
+  "description": "DVC browser upload de-identification guard.",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApQrsbroSwlIjsOJP8tHyDcZneRotxUQzRMlcW0R8zeE0Bg5BVp0WiS2FhGH776uwjat/Zq/RusRvdCAUdamjllSBqApW7+yw1ORc4HkaSloXQsC4kxpHzlUWsl4MJxn0/vO6KsmmrfNQCskoZ0Kla/PGZ1M94ULlkpqQrAiEIxmMsbHDr0AJJmsQSIQUBPa7G8BlRu6/l051lYQUI+z16I4xgrnnopshia8WYKuvu7XFjun/FG6/GFuP/5SuBkFbVHa0gfPT9fqEFlUOka1riRikqhRL/7bPWCYaJf87RFO4Wg+p/k+oI2Ibx4lfXq0fuRwW7w7L9dRUPUNk14CWfQIDAQAB",
   "permissions": [
-    "nativeMessaging"
+    "nativeMessaging",
+    "storage"
   ],
   "host_permissions": [
     "http://*/*",
     "https://*/*"
   ],
+  "storage": {
+    "managed_schema": "policy_schema.json"
+  },
   "background": {
     "service_worker": "background.js"
   },
