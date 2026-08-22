@@ -37,6 +37,7 @@ jobs:
           $nativeManifest = Get-Content native_host/native_host_manifest.json -Raw | ConvertFrom-Json
           if ($nativeManifest.name -ne 'com.trcore.dvc_upload_guard') { throw 'Native host name mismatch' }
           if ($nativeManifest.allowed_origins[0] -ne 'chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/') { throw 'Extension ID mismatch' }
+          if (-not (Test-Path deploy_native/GET_TEST_BROWSER.ps1)) { throw 'Chrome for Testing downloader missing' }
 
       - name: Publish self-contained native host
         shell: pwsh
@@ -66,6 +67,7 @@ jobs:
           Copy-Item deploy_native/UNINSTALL.cmd (Join-Path $out 'UNINSTALL.cmd') -Force
           Copy-Item deploy_native/START_TEST_CHROME.cmd (Join-Path $out 'START_TEST_CHROME.cmd') -Force
           Copy-Item deploy_native/START_TEST_EDGE.cmd (Join-Path $out 'START_TEST_EDGE.cmd') -Force
+          Copy-Item deploy_native/GET_TEST_BROWSER.ps1 (Join-Path $out 'GET_TEST_BROWSER.ps1') -Force
           Copy-Item deploy_native/VERIFY.cmd (Join-Path $out 'VERIFY.cmd') -Force
           Copy-Item deploy_native/README_FIRST.txt (Join-Path $out 'README_FIRST.txt') -Force
           $lines = Get-ChildItem $out -Recurse -File | Sort-Object FullName | ForEach-Object {
