@@ -1,0 +1,310 @@
+name: Build DVC Three Upload Engines
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-engine-tests-v1
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Validate JavaScript engines
+        shell: pwsh
+        run: |
+          node --check three_engines/common.js
+          node --check three_engines/engine_a_interceptor.js
+          node --check three_engines/engine_b_webpilot.js
+          node --check three_engines/engine_c_browser_bridge.js
+          if ($LASTEXITCODE -ne 0) { throw 'JavaScript syntax validation failed' }
+
+      - name: Build native sanitizer host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'native host health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'native host sanitizer selftest failed' }
+
+      - name: Package three isolated engines
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+
+          $termsJson = '["國民身分證","居民身份证","身分證","身份证","護照","passport","national identification","national id","id number"]'
+
+          $variants = @(
+            [pscustomobject]@{
+              Code='A'; Zip='DVC_TEST_A_INTERCEPTOR_WINDOWS'; Name='DVC TEST-A Interceptor';
+              Engine='three_engines/engine_a_interceptor.js'; Install='UploadGuardTestA'; Profile='UploadGuardTestAProfile';
+              Host='com.trcore.dvc_upload_guard_test_a'; ExtId='hgekkadhoaokmcdckgiepjnlpiablpai';
+              Key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArO2QiX5ZOWoxJiWNzLcdbkFGrfKRYcaehnmuSeeBDJrGUvpLojGaN3Kmoa0Br3akGQpfXbfjtDYznKJdbKdq5o4yv5bvRi+FA0rvfT8cSkY015qNTKKimkAv4/jIkz5d5y9JndK3qDiE7rs7KUCnqzborn+ym5uUZN6tleWmovE5P4PEAUuE7ljEA/F2eISJasGjuFMSIPkRZrPrSQ14SoidG3wscIhMbNCFPD3/Lx/mZlX5rLI9g56HdI1+BhAx9eIljw50JBDC/xMQFRRPtzx2AMAQ4O6UJaxe6jBfbDywSv1mSNOYPSOb3CyKgOzxpvxmvVaXYSSCNWL4hb56kwIDAQAB'
+            },
+            [pscustomobject]@{
+              Code='B'; Zip='DVC_TEST_B_WEBPILOT_WINDOWS'; Name='DVC TEST-B Framework Setter';
+              Engine='three_engines/engine_b_webpilot.js'; Install='UploadGuardTestB'; Profile='UploadGuardTestBProfile';
+              Host='com.trcore.dvc_upload_guard_test_b'; ExtId='pbiafohbhdicfkfhlecmhcgicdlbjnfa';
+              Key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArspb6bG3eQQ2u6dqsWMoYOZI/usayW+3xkFJ3kBipaelPUPO0OxcSaW8NeNbkLs3PbAaxuRAiQ5KgQ9SZScLkvWX/QaBQkjrWRWO4BosSIZG7Ck8HiHMiq9hTwInXRBGoGD1QIEgqnLyx607PoJTeYPsoWcywt0CaX4t/iTQoKtePRVsdmiBDrn1NuB56TBbCSKAIzwvKNRaprIcWwb+vth650zv3XhCVgpIGV+0riWs02Og0w322VCrbvFsDDM9nsTvMUo0dZhOFAovXvTAvyCTP3y2qDEXoaS+5Xra8NdULBkNfOD3huRXv3ByUNp0DseO16NR/0bX5yWeKey+IwIDAQAB'
+            },
+            [pscustomobject]@{
+              Code='C'; Zip='DVC_TEST_C_BROWSER_BRIDGE_WINDOWS'; Name='DVC TEST-C Browser Bridge Proxy Picker';
+              Engine='three_engines/engine_c_browser_bridge.js'; Install='UploadGuardTestC'; Profile='UploadGuardTestCProfile';
+              Host='com.trcore.dvc_upload_guard_test_c'; ExtId='alnkhhefkgjkmlldcijplhkjakhcjmmn';
+              Key='MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAps+e4mfm8BrDbwm2q9tImql8KhPx3Kna7o1P+gH+J+qDLAepwHcVhSApn6OlO2fXG3W4seqmKA9rdLhmJAIfFkNb/9DKQ0Uf5c2aVdjCsrge/KxWvtHy6OUCCHf504+3cMwmAa5aoMhem+MXVDitzwbU/IaQ4tr9NJPDsgwi4a/bVVzzgvZoUpzLzaxd39mcDVjSuz7/9/6bHhs4bEYF26+snsuJWBpOePw67voyqm5aw//2WhucR821LjUYbM/+VyZsyOXOq726vbzJ7R13jIUbDuQd+7g6BUBoPYNkcF0Euh9kxjUuJO3nEEaG7D/4diO2xG9/PUal4mwLJqjzoQIDAQAB'
+            }
+          )
+
+          foreach ($v in $variants) {
+            $out = Join-Path $PWD ('dist\\' + $v.Zip)
+            $ext = Join-Path $out 'extension'
+            New-Item -ItemType Directory -Path $ext -Force | Out-Null
+
+            Copy-Item build/host/DVCUploadGuardHost.exe (Join-Path $out 'DVCUploadGuardHost.exe') -Force
+            Copy-Item deploy_native/GET_TEST_BROWSER.ps1 (Join-Path $out 'GET_TEST_BROWSER.ps1') -Force
+            Copy-Item three_engines/common.js (Join-Path $ext 'common.js') -Force
+            Copy-Item $v.Engine (Join-Path $ext 'engine.js') -Force
+            Copy-Item extension/policy_schema.json (Join-Path $ext 'policy_schema.json') -Force
+
+            $background = @"
+'use strict';
+const HOST_NAME = '$($v.Host)';
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.type !== 'DVC_SANITIZE') return false;
+  chrome.runtime.sendNativeMessage(HOST_NAME, message.payload, (response) => {
+    if (chrome.runtime.lastError) {
+      sendResponse({ ok:false, action:'block', reason:'Native host error: ' + chrome.runtime.lastError.message });
+      return;
+    }
+    sendResponse(response || { ok:false, action:'block', reason:'Native host returned no response' });
+  });
+  return true;
+});
+"@
+            $background | Set-Content -Encoding utf8 (Join-Path $ext 'background.js')
+
+            $manifest = [ordered]@{
+              manifest_version = 3
+              name = $v.Name
+              version = '1.0.0'
+              description = 'Isolated DVC upload-engine comparison build.'
+              key = $v.Key
+              permissions = @('nativeMessaging','storage')
+              host_permissions = @('http://*/*','https://*/*')
+              storage = @{ managed_schema='policy_schema.json' }
+              background = @{ service_worker='background.js' }
+              content_scripts = @(@{ matches=@('http://*/*','https://*/*'); js=@('common.js','engine.js'); run_at='document_start'; all_frames=$true })
+              action = @{ default_title=$v.Name }
+            }
+            $manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 (Join-Path $ext 'manifest.json')
+
+            $installedExe = 'C:\\Program Files\\DVC\\' + $v.Install + '\\DVCUploadGuardHost.exe'
+            $nativeManifest = [ordered]@{
+              name = $v.Host
+              description = $v.Name + ' Native Host'
+              path = $installedExe
+              type = 'stdio'
+              allowed_origins = @('chrome-extension://' + $v.ExtId + '/')
+            }
+            $nativeManifest | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 (Join-Path $out 'native_host_manifest.json')
+
+            $install = @"
+@echo off
+setlocal EnableExtensions
+net session >nul 2>&1
+if errorlevel 1 (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -Verb RunAs -FilePath $env:ComSpec -ArgumentList '/c','""%~f0""'"
+  exit /b
+)
+set "ROOT=C:\Program Files\DVC\$($v.Install)"
+set "HOST=$($v.Host)"
+set "EXTID=$($v.ExtId)"
+if not exist "%ROOT%" mkdir "%ROOT%"
+if not exist "%ROOT%\extension" mkdir "%ROOT%\extension"
+copy /Y "%~dp0DVCUploadGuardHost.exe" "%ROOT%\DVCUploadGuardHost.exe" >nul
+copy /Y "%~dp0native_host_manifest.json" "%ROOT%\native_host_manifest.json" >nul
+copy /Y "%~dp0GET_TEST_BROWSER.ps1" "%ROOT%\GET_TEST_BROWSER.ps1" >nul
+copy /Y "%~dp0START_TEST.cmd" "%ROOT%\START_TEST.cmd" >nul
+copy /Y "%~dp0VERIFY.cmd" "%ROOT%\VERIFY.cmd" >nul
+copy /Y "%~dp0UNINSTALL.cmd" "%ROOT%\UNINSTALL.cmd" >nul
+robocopy "%~dp0extension" "%ROOT%\extension" /E /NFL /NDL /NJH /NJS /NP >nul
+reg add "HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\%HOST%" /ve /t REG_SZ /d "%ROOT%\native_host_manifest.json" /f /reg:64 >nul
+reg add "HKLM\SOFTWARE\Microsoft\Edge\NativeMessagingHosts\%HOST%" /ve /t REG_SZ /d "%ROOT%\native_host_manifest.json" /f /reg:64 >nul
+reg add "HKLM\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\%EXTID%\policy" /v Enabled /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\%EXTID%\policy" /v ReplacementText /t REG_SZ /d "[DVC-REDACTED]" /f >nul
+reg add "HKLM\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\%EXTID%\policy" /v RedactionTermsJson /t REG_SZ /d "$termsJson" /f >nul
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\%EXTID%\policy" /v Enabled /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\%EXTID%\policy" /v ReplacementText /t REG_SZ /d "[DVC-REDACTED]" /f >nul
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\%EXTID%\policy" /v RedactionTermsJson /t REG_SZ /d "$termsJson" /f >nul
+"%ROOT%\DVCUploadGuardHost.exe" --health
+if errorlevel 1 goto :fail
+"%ROOT%\DVCUploadGuardHost.exe" --selftest
+if errorlevel 1 goto :fail
+echo INSTALL_OK $($v.Name)
+call "%ROOT%\START_TEST.cmd"
+exit /b 0
+:fail
+echo INSTALL_FAILED
+pause
+exit /b 1
+"@
+            $install | Set-Content -Encoding ascii (Join-Path $out 'INSTALL.cmd')
+
+            $start = @"
+@echo off
+setlocal EnableExtensions
+set "ROOT=C:\Program Files\DVC\$($v.Install)"
+set "EXT=%ROOT%\extension"
+set "PROFILE=%LOCALAPPDATA%\DVC\$($v.Profile)"
+set "CHROME=%ProgramData%\DVC\UploadGuard\Browser\chrome-win64\chrome.exe"
+if not exist "%CHROME%" (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%ROOT%\GET_TEST_BROWSER.ps1"
+  if errorlevel 1 exit /b 2
+)
+if not exist "%PROFILE%" mkdir "%PROFILE%" >nul 2>&1
+set "URL=%~1"
+if "%URL%"=="" set "URL=https://chatgpt.com/"
+start "$($v.Name)" "%CHROME%" --user-data-dir="%PROFILE%" --no-first-run --no-default-browser-check --disable-extensions-except="%EXT%" --load-extension="%EXT%" "%URL%"
+echo STARTED $($v.Name)
+exit /b 0
+"@
+            $start | Set-Content -Encoding ascii (Join-Path $out 'START_TEST.cmd')
+
+            $verify = @"
+@echo off
+setlocal EnableExtensions
+set "ROOT=C:\Program Files\DVC\$($v.Install)"
+set "HOST=$($v.Host)"
+set "EXTID=$($v.ExtId)"
+set "FAIL=0"
+if exist "%ROOT%\DVCUploadGuardHost.exe" (echo [PASS] Native host EXE.) else (echo [FAIL] Native host EXE missing.&set FAIL=1)
+if exist "%ROOT%\extension\manifest.json" (echo [PASS] Extension manifest.) else (echo [FAIL] Extension manifest missing.&set FAIL=1)
+reg query "HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\%HOST%" /ve /reg:64 >nul 2>&1
+if errorlevel 1 (echo [FAIL] Chrome native host registration.&set FAIL=1) else echo [PASS] Chrome native host registration.
+reg query "HKLM\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\%EXTID%\policy" /v RedactionTermsJson >nul 2>&1
+if errorlevel 1 (echo [FAIL] Chrome managed redaction policy.&set FAIL=1) else echo [PASS] Chrome managed redaction policy.
+"%ROOT%\DVCUploadGuardHost.exe" --health
+if errorlevel 1 set FAIL=1
+"%ROOT%\DVCUploadGuardHost.exe" --selftest
+if errorlevel 1 set FAIL=1
+echo Engine: $($v.Name)
+echo Extension ID: %EXTID%
+echo Native host: %HOST%
+if "%FAIL%"=="0" (echo VERIFY_PASS) else echo VERIFY_FAIL
+pause
+exit /b %FAIL%
+"@
+            $verify | Set-Content -Encoding ascii (Join-Path $out 'VERIFY.cmd')
+
+            $uninstall = @"
+@echo off
+setlocal EnableExtensions
+net session >nul 2>&1
+if errorlevel 1 (
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -Verb RunAs -FilePath $env:ComSpec -ArgumentList '/c','""%~f0""'"
+  exit /b
+)
+set "ROOT=C:\Program Files\DVC\$($v.Install)"
+set "HOST=$($v.Host)"
+set "EXTID=$($v.ExtId)"
+reg delete "HKLM\SOFTWARE\Google\Chrome\NativeMessagingHosts\%HOST%" /f /reg:64 >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Edge\NativeMessagingHosts\%HOST%" /f /reg:64 >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\%EXTID%" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\%EXTID%" /f >nul 2>&1
+if exist "%ROOT%" rmdir /S /Q "%ROOT%"
+if exist "%LOCALAPPDATA%\DVC\$($v.Profile)" rmdir /S /Q "%LOCALAPPDATA%\DVC\$($v.Profile)"
+echo UNINSTALL_OK $($v.Name)
+pause
+exit /b 0
+"@
+            $uninstall | Set-Content -Encoding ascii (Join-Path $out 'UNINSTALL.cmd')
+
+            $readme = @"
+$($v.Name)
+
+Purpose: isolated comparison build for DVC browser upload de-identification.
+Install folder: C:\Program Files\DVC\$($v.Install)
+Profile: %LOCALAPPDATA%\DVC\$($v.Profile)
+Extension ID: $($v.ExtId)
+Native host: $($v.Host)
+
+Test order:
+1. Run INSTALL.cmd as administrator.
+2. START_TEST.cmd launches an isolated Chrome for Testing profile.
+3. Upload the same DOCX in each engine and download/inspect the received file.
+4. Sensitive terms such as passport / Taiwan ID labels must become [DVC-REDACTED].
+5. Run VERIFY.cmd for host/policy checks.
+6. Run UNINSTALL.cmd before moving to another engine if you want a completely clean comparison.
+"@
+            $readme | Set-Content -Encoding ascii (Join-Path $out 'README_FIRST.txt')
+
+            $hashes = Get-ChildItem $out -Recurse -File | Sort-Object FullName | ForEach-Object {
+              $h = Get-FileHash $_.FullName -Algorithm SHA256
+              $relative = $_.FullName.Substring($out.Length + 1)
+              $h.Hash + '  ' + $relative
+            }
+            $hashes | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
+            Compress-Archive -Path (Join-Path $out '*') -DestinationPath (Join-Path $PWD ('dist\\' + $v.Zip + '.zip')) -Force
+          }
+
+          $hosts = $variants.Host | Sort-Object -Unique
+          $ids = $variants.ExtId | Sort-Object -Unique
+          $installs = $variants.Install | Sort-Object -Unique
+          $profiles = $variants.Profile | Sort-Object -Unique
+          if ($hosts.Count -ne 3 -or $ids.Count -ne 3 -or $installs.Count -ne 3 -or $profiles.Count -ne 3) {
+            throw 'Isolation check failed: host/id/install/profile values must all be unique.'
+          }
+
+      - name: Upload TEST-A artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_A_INTERCEPTOR_WINDOWS
+          path: dist/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload TEST-B artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_B_WEBPILOT_WINDOWS
+          path: dist/DVC_TEST_B_WEBPILOT_WINDOWS.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload TEST-C artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_C_BROWSER_BRIDGE_WINDOWS
+          path: dist/DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish stable ZIPs on test branch
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item dist/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip release/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip -Force
+          Copy-Item dist/DVC_TEST_B_WEBPILOT_WINDOWS.zip release/DVC_TEST_B_WEBPILOT_WINDOWS.zip -Force
+          Copy-Item dist/DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip release/DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip release/DVC_TEST_B_WEBPILOT_WINDOWS.zip release/DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Publish three DVC upload engine test ZIPs [skip ci]'
+            git push origin HEAD:dvc-upload-engine-tests-v1
+          }
