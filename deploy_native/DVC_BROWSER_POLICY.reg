@@ -1,0 +1,11 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome\3rdparty\extensions\cdmogelilldmfcioieahdnaocmillhcl\policy]
+"Enabled"=dword:00000001
+"RedactionTermsJson"="[\"\\u570B\\u6C11\\u8EAB\\u5206\\u8B49\",\"\\u5C45\\u6C11\\u8EAB\\u4EFD\\u8BC1\",\"\\u8EAB\\u5206\\u8B49\",\"\\u8EAB\\u4EFD\\u8BC1\",\"\\u8B77\\u7167\",\"passport\",\"national identification\",\"national id\",\"id number\"]"
+"ReplacementText"="[DVC-REDACTED]"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\3rdparty\extensions\cdmogelilldmfcioieahdnaocmillhcl\policy]
+"Enabled"=dword:00000001
+"RedactionTermsJson"="[\"\\u570B\\u6C11\\u8EAB\\u5206\\u8B49\",\"\\u5C45\\u6C11\\u8EAB\\u4EFD\\u8BC1\",\"\\u8EAB\\u5206\\u8B49\",\"\\u8EAB\\u4EFD\\u8BC1\",\"\\u8B77\\u7167\",\"passport\",\"national identification\",\"national id\",\"id number\"]"
+"ReplacementText"="[DVC-REDACTED]"
