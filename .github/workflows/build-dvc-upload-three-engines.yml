@@ -1,0 +1,124 @@
+name: Build DVC Three Upload Engines
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+    paths:
+      - 'ci/build-three-upload-engines.ps1'
+      - '.github/workflows/build-dvc-upload-three-engines.yml'
+      - 'native_host/**'
+      - 'extension/manifest.json'
+      - 'deploy_native/GET_TEST_BROWSER.ps1'
+  workflow_dispatch:
+
+jobs:
+  build-three-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout DVC repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish shared DVC sanitization host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          if (-not (Test-Path build/host/DVCUploadGuardHost.exe)) { throw 'DVCUploadGuardHost.exe missing' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'DOCX sanitization selftest failed' }
+
+      - name: Generate three isolated engine packages
+        shell: pwsh
+        run: |
+          & ./ci/build-three-upload-engines.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'three-engine generator failed' }
+
+      - name: Verify package isolation and required files
+        shell: pwsh
+        run: |
+          $specs = @(
+            @{ Folder='DVC_TEST_A_INTERCEPTOR'; Host='com.trcore.dvc_upload_guard_test_a'; Profile='UploadGuardTestAProfile'; Marker='DVC_ENGINE_A_PROXY_PICKER' },
+            @{ Folder='DVC_TEST_B_WEBPILOT'; Host='com.trcore.dvc_upload_guard_test_b'; Profile='UploadGuardTestBProfile'; Marker='DVC_ENGINE_B_FRAMEWORK_SETTER' },
+            @{ Folder='DVC_TEST_C_BROWSER_BRIDGE'; Host='com.trcore.dvc_upload_guard_test_c'; Profile='UploadGuardTestCProfile'; Marker='DVC_ENGINE_C_NATIVE_BRIDGE' }
+          )
+          foreach ($s in $specs) {
+            $root = Join-Path $PWD ('dist_three\' + $s.Folder)
+            foreach ($file in @('INSTALL.cmd','VERIFY.cmd','UNINSTALL.cmd','START_TEST.cmd','DVCUploadGuardHost.exe','native_host_manifest.json','README_FIRST.txt','ENGINE_MARKER.txt','extension\manifest.json','extension\background.js','extension\content.js')) {
+              if (-not (Test-Path (Join-Path $root $file))) { throw "$($s.Folder) missing $file" }
+            }
+            $nm = Get-Content (Join-Path $root 'native_host_manifest.json') -Raw | ConvertFrom-Json
+            if ($nm.name -ne $s.Host) { throw "$($s.Folder) host isolation mismatch" }
+            $start = Get-Content (Join-Path $root 'START_TEST.cmd') -Raw
+            if ($start -notmatch [regex]::Escape($s.Profile)) { throw "$($s.Folder) profile isolation mismatch" }
+            $js = Get-Content (Join-Path $root 'extension\content.js') -Raw
+            if ($js -notmatch [regex]::Escape($s.Marker)) { throw "$($s.Folder) engine marker missing" }
+            & (Join-Path $root 'DVCUploadGuardHost.exe') --selftest
+            if ($LASTEXITCODE -ne 0) { throw "$($s.Folder) sanitization selftest failed" }
+          }
+          $hosts = $specs.Host | Select-Object -Unique
+          $profiles = $specs.Profile | Select-Object -Unique
+          if ($hosts.Count -ne 3) { throw 'Native host names are not isolated' }
+          if ($profiles.Count -ne 3) { throw 'Chrome profiles are not isolated' }
+
+      - name: Create three Windows ZIPs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist_zip -Force | Out-Null
+          Compress-Archive -Path 'dist_three\DVC_TEST_A_INTERCEPTOR\*' -DestinationPath 'dist_zip\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' -Force
+          Compress-Archive -Path 'dist_three\DVC_TEST_B_WEBPILOT\*' -DestinationPath 'dist_zip\DVC_TEST_B_WEBPILOT_WINDOWS.zip' -Force
+          Compress-Archive -Path 'dist_three\DVC_TEST_C_BROWSER_BRIDGE\*' -DestinationPath 'dist_zip\DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip' -Force
+          Get-ChildItem dist_zip\*.zip | ForEach-Object {
+            if ($_.Length -lt 1000000) { throw "$($_.Name) unexpectedly small" }
+            Get-FileHash $_.FullName -Algorithm SHA256
+          }
+
+      - name: Upload TEST-A artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_A_INTERCEPTOR_WINDOWS
+          path: dist_three/DVC_TEST_A_INTERCEPTOR
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload TEST-B artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_B_WEBPILOT_WINDOWS
+          path: dist_three/DVC_TEST_B_WEBPILOT
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload TEST-C artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_C_BROWSER_BRIDGE_WINDOWS
+          path: dist_three/DVC_TEST_C_BROWSER_BRIDGE
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish stable three ZIPs on branch
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item 'dist_zip\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' 'release\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' -Force
+          Copy-Item 'dist_zip\DVC_TEST_B_WEBPILOT_WINDOWS.zip' 'release\DVC_TEST_B_WEBPILOT_WINDOWS.zip' -Force
+          Copy-Item 'dist_zip\DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip' 'release\DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip' -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip release/DVC_TEST_B_WEBPILOT_WINDOWS.zip release/DVC_TEST_C_BROWSER_BRIDGE_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Publish DVC three upload engine test ZIPs [skip ci]'
+            git push origin HEAD:dvc-upload-guard-native-v1
+          }
