@@ -5,7 +5,7 @@ title DVC Upload Guard Native V1 - Install
 net session >nul 2>&1
 if errorlevel 1 (
   echo Requesting administrator permission...
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -Verb RunAs -FilePath '%~f0'"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process -Verb RunAs -FilePath $env:ComSpec -ArgumentList '/c','""%~f0""'"
   exit /b
 )
 
@@ -26,6 +26,7 @@ copy /Y "%~dp0native_host_manifest.json" "%ROOT%\native_host_manifest.json" >nul
 if errorlevel 1 goto :fail
 copy /Y "%~dp0START_TEST_CHROME.cmd" "%ROOT%\START_TEST_CHROME.cmd" >nul
 copy /Y "%~dp0START_TEST_EDGE.cmd" "%ROOT%\START_TEST_EDGE.cmd" >nul
+copy /Y "%~dp0GET_TEST_BROWSER.ps1" "%ROOT%\GET_TEST_BROWSER.ps1" >nul
 copy /Y "%~dp0VERIFY.cmd" "%ROOT%\VERIFY.cmd" >nul
 robocopy "%~dp0extension" "%ROOT%\extension" /E /NFL /NDL /NJH /NJS /NP >nul
 
@@ -47,15 +48,15 @@ if errorlevel 1 goto :fail
 "%ROOT%\DVCUploadGuardHost.exe" --selftest
 if errorlevel 1 goto :fail
 
-echo [4/4] Launch isolated Chrome test profile...
+echo [4/4] Launch isolated Chrome for Testing profile...
 call "%ROOT%\START_TEST_CHROME.cmd"
+if errorlevel 1 goto :fail
 
 echo.
 echo INSTALL_OK
 echo Extension ID: cdmogelilldmfcioieahdnaocmillhcl
 echo Native host: com.trcore.dvc_upload_guard
-echo Test page should open automatically in Chrome.
-echo If Chrome is unavailable, run START_TEST_EDGE.cmd.
+echo The DVC test page should be open in Chrome for Testing.
 echo.
 pause
 exit /b 0
@@ -63,6 +64,6 @@ exit /b 0
 :fail
 echo.
 echo INSTALL_FAILED
-echo Run this package again and keep the console output.
+echo Run VERIFY.cmd and keep the console output.
 pause
 exit /b 1
