@@ -24,6 +24,9 @@ ENFORCEMENT_CONFIRMED
 LOG
 %ProgramData%\DVC\ContentAnalysis\logs\dvc_content_analysis.log
 
+BUILD
+The Windows executable is built by GitHub Actions on windows-2022 using the pinned Chromium Content Analysis SDK commit.
+
 IMPORTANT
 V1 is intentionally narrow. PDF, OCR, Presidio and safe-copy replacement are not enabled yet.
 Unsupported content and scanner errors are blocked by design.
