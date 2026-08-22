@@ -63,7 +63,6 @@ jobs:
           Copy-Item deploy/VERIFY.cmd (Join-Path $out 'VERIFY.cmd')
           Copy-Item deploy/START_AGENT.cmd (Join-Path $out 'START_AGENT.cmd')
           Copy-Item deploy/README_FIRST.txt (Join-Path $out 'README_FIRST.txt')
-          Copy-Item deploy/chrome_policy.reg (Join-Path $out 'chrome_policy.reg')
           Copy-Item sdk/LICENSE (Join-Path $out 'CHROMIUM_CONTENT_ANALYSIS_SDK_LICENSE.txt')
 
           $hashLines = @()
