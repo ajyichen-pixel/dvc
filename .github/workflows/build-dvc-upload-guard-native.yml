@@ -1,5 +1,8 @@
 name: Build DVC Upload Guard Native V1
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -48,7 +51,6 @@ jobs:
           $out = Join-Path $PWD 'dist\DVC_UPLOAD_GUARD_NATIVE_V1'
           New-Item -ItemType Directory -Path $out -Force | Out-Null
           New-Item -ItemType Directory -Path (Join-Path $out 'extension') -Force | Out-Null
-
           Copy-Item build/host/DVCUploadGuardHost.exe (Join-Path $out 'DVCUploadGuardHost.exe') -Force
           Copy-Item native_host/native_host_manifest.json (Join-Path $out 'native_host_manifest.json') -Force
           Copy-Item extension/* (Join-Path $out 'extension') -Recurse -Force
@@ -58,13 +60,13 @@ jobs:
           Copy-Item deploy_native/START_TEST_EDGE.cmd (Join-Path $out 'START_TEST_EDGE.cmd') -Force
           Copy-Item deploy_native/VERIFY.cmd (Join-Path $out 'VERIFY.cmd') -Force
           Copy-Item deploy_native/README_FIRST.txt (Join-Path $out 'README_FIRST.txt') -Force
-
           $lines = Get-ChildItem $out -Recurse -File | Sort-Object FullName | ForEach-Object {
             $h = Get-FileHash $_.FullName -Algorithm SHA256
             $relative = $_.FullName.Substring($out.Length + 1)
             $h.Hash + '  ' + $relative
           }
           $lines | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
+          Compress-Archive -Path (Join-Path $out '*') -DestinationPath 'dist\DVC_UPLOAD_GUARD_NATIVE_V1_WINDOWS.zip' -Force
 
       - name: Upload Windows test artifact
         uses: actions/upload-artifact@v4
@@ -73,3 +75,17 @@ jobs:
           path: dist/DVC_UPLOAD_GUARD_NATIVE_V1
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish stable ZIP on branch
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item 'dist\DVC_UPLOAD_GUARD_NATIVE_V1_WINDOWS.zip' 'release\DVC_UPLOAD_GUARD_NATIVE_V1_WINDOWS.zip' -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_UPLOAD_GUARD_NATIVE_V1_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Update DVC Upload Guard Native V1 test ZIP [skip ci]'
+            git push origin HEAD:dvc-upload-guard-native-v1
+          }
