@@ -4,7 +4,7 @@ echo ============================================================
 echo DVC CONTENT ANALYSIS AGENT V1 - VERIFY
 echo ============================================================
 
-tasklist /FI "IMAGENAME eq DVCContentAnalysisAgent.exe" | find /I "DVCContentAnalysisAgent.exe" >nul
+powershell.exe -NoProfile -Command "$p=Get-Process -Name 'DVCContentAnalysisAgent' -ErrorAction SilentlyContinue; if($p){ exit 0 } else { exit 1 }"
 if errorlevel 1 (echo [FAIL] Agent process not running.) else (echo [PASS] Agent process running.)
 
 schtasks /Query /TN "DVC Content Analysis Agent" >nul 2>nul
@@ -31,7 +31,7 @@ if exist "%BOOTLOG%" (
 
 echo.
 echo ===== TASK STATUS =====
-schtasks /Query /TN "DVC Content Analysis Agent" /V /FO LIST 2>nul | findstr /I /C:"Status:" /C:"Last Run Time:" /C:"Last Result:"
+schtasks /Query /TN "DVC Content Analysis Agent" /V /FO LIST 2>nul
 
 echo.
 echo Chrome check: chrome://policy
