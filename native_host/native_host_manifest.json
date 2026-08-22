@@ -1,0 +1,9 @@
+{
+  "name": "com.trcore.dvc_upload_guard",
+  "description": "DVC Upload Guard Native Messaging Host",
+  "path": "C:\\Program Files\\DVC\\UploadGuard\\DVCUploadGuardHost.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/"
+  ]
+}

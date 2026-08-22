@@ -1,0 +1,75 @@
+name: Build DVC Upload Guard Native V1
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout DVC repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Validate extension manifests
+        shell: pwsh
+        run: |
+          $m = Get-Content extension/manifest.json -Raw | ConvertFrom-Json
+          if ($m.manifest_version -ne 3) { throw 'Manifest V3 required' }
+          $host = Get-Content native_host/native_host_manifest.json -Raw | ConvertFrom-Json
+          if ($host.name -ne 'com.trcore.dvc_upload_guard') { throw 'Native host name mismatch' }
+          if ($host.allowed_origins[0] -ne 'chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/') { throw 'Extension ID mismatch' }
+
+      - name: Publish self-contained native host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          if (-not (Test-Path build/host/DVCUploadGuardHost.exe)) { throw 'DVCUploadGuardHost.exe missing' }
+
+      - name: Native host health and sanitization self-test
+        shell: pwsh
+        run: |
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'selftest failed' }
+
+      - name: Package Windows test kit
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD 'dist\DVC_UPLOAD_GUARD_NATIVE_V1'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          New-Item -ItemType Directory -Path (Join-Path $out 'extension') -Force | Out-Null
+
+          Copy-Item build/host/DVCUploadGuardHost.exe (Join-Path $out 'DVCUploadGuardHost.exe') -Force
+          Copy-Item native_host/native_host_manifest.json (Join-Path $out 'native_host_manifest.json') -Force
+          Copy-Item extension/* (Join-Path $out 'extension') -Recurse -Force
+          Copy-Item deploy_native/INSTALL.cmd (Join-Path $out 'INSTALL.cmd') -Force
+          Copy-Item deploy_native/UNINSTALL.cmd (Join-Path $out 'UNINSTALL.cmd') -Force
+          Copy-Item deploy_native/START_TEST_CHROME.cmd (Join-Path $out 'START_TEST_CHROME.cmd') -Force
+          Copy-Item deploy_native/START_TEST_EDGE.cmd (Join-Path $out 'START_TEST_EDGE.cmd') -Force
+          Copy-Item deploy_native/VERIFY.cmd (Join-Path $out 'VERIFY.cmd') -Force
+          Copy-Item deploy_native/README_FIRST.txt (Join-Path $out 'README_FIRST.txt') -Force
+
+          $lines = Get-ChildItem $out -Recurse -File | Sort-Object FullName | ForEach-Object {
+            $h = Get-FileHash $_.FullName -Algorithm SHA256
+            $relative = $_.FullName.Substring($out.Length + 1)
+            $h.Hash + '  ' + $relative
+          }
+          $lines | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
+
+      - name: Upload Windows test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_UPLOAD_GUARD_NATIVE_V1_WINDOWS
+          path: dist/DVC_UPLOAD_GUARD_NATIVE_V1
+          if-no-files-found: error
+          retention-days: 30
