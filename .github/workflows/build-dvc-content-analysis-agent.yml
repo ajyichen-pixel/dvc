@@ -1,0 +1,66 @@
+name: Build DVC Content Analysis Agent V1
+
+on:
+  push:
+    branches:
+      - dvc-content-analysis-agent-v1
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout DVC repo
+        uses: actions/checkout@v4
+
+      - name: Clone pinned Chromium Content Analysis SDK
+        shell: pwsh
+        run: |
+          git clone https://github.com/chromium/content_analysis_sdk.git sdk
+          Set-Location sdk
+          git checkout 0a0e7ea516249e786d5a8884552bbd6e163d89cb
+          $head = (git rev-parse HEAD).Trim()
+          if ($head -ne '0a0e7ea516249e786d5a8884552bbd6e163d89cb') { throw "SDK pin mismatch: $head" }
+
+      - name: Inject DVC handler
+        shell: pwsh
+        run: |
+          Copy-Item -Force ci/dvc_handler.h sdk/demo/handler.h
+
+      - name: Prepare SDK build
+        shell: cmd
+        run: |
+          cd sdk
+          call prepare_build.bat build
+          if errorlevel 1 exit /b 1
+
+      - name: Build Release
+        shell: cmd
+        run: |
+          cmake --build sdk/build --config Release --target agent
+          if errorlevel 1 exit /b 1
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $out = Join-Path $PWD 'dist\DVC_CONTENT_ANALYSIS_AGENT_V1'
+          New-Item -ItemType Directory -Path $out -Force | Out-Null
+          $agent = Get-ChildItem sdk/build -Recurse -Filter agent.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
+          if (-not $agent) { throw 'agent.exe not found' }
+          Copy-Item $agent.FullName (Join-Path $out 'DVCContentAnalysisAgent.exe')
+          Copy-Item ci/DVC_DOCX_SCAN.ps1 (Join-Path $out 'DVC_DOCX_SCAN.ps1')
+          Copy-Item deploy/INSTALL.cmd (Join-Path $out 'INSTALL.cmd')
+          Copy-Item deploy/UNINSTALL.cmd (Join-Path $out 'UNINSTALL.cmd')
+          Copy-Item deploy/VERIFY.cmd (Join-Path $out 'VERIFY.cmd')
+          Copy-Item deploy/START_AGENT.cmd (Join-Path $out 'START_AGENT.cmd')
+          Copy-Item deploy/README_FIRST.txt (Join-Path $out 'README_FIRST.txt')
+          Copy-Item deploy/chrome_policy.reg (Join-Path $out 'chrome_policy.reg')
+          Copy-Item sdk/LICENSE (Join-Path $out 'CHROMIUM_CONTENT_ANALYSIS_SDK_LICENSE.txt')
+          Get-FileHash (Join-Path $out 'DVCContentAnalysisAgent.exe') -Algorithm SHA256 | ForEach-Object { $_.Hash + '  DVCContentAnalysisAgent.exe' } | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_CONTENT_ANALYSIS_AGENT_V1_WINDOWS
+          path: dist/DVC_CONTENT_ANALYSIS_AGENT_V1
+          if-no-files-found: error
