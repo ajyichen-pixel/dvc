@@ -51,6 +51,12 @@ jobs:
           $agent = Get-ChildItem sdk/build -Recurse -Filter agent.exe | Where-Object { $_.FullName -match 'Release' } | Select-Object -First 1
           if (-not $agent) { throw 'agent.exe not found' }
           Copy-Item $agent.FullName (Join-Path $out 'DVCContentAnalysisAgent.exe')
+
+          $runtimeBin = Join-Path $PWD 'sdk\build\vcpkg\installed\x64-windows\bin'
+          if (Test-Path $runtimeBin) {
+            Get-ChildItem $runtimeBin -Filter *.dll | ForEach-Object { Copy-Item $_.FullName $out -Force }
+          }
+
           Copy-Item ci/DVC_DOCX_SCAN.ps1 (Join-Path $out 'DVC_DOCX_SCAN.ps1')
           Copy-Item deploy/INSTALL.cmd (Join-Path $out 'INSTALL.cmd')
           Copy-Item deploy/UNINSTALL.cmd (Join-Path $out 'UNINSTALL.cmd')
@@ -59,7 +65,13 @@ jobs:
           Copy-Item deploy/README_FIRST.txt (Join-Path $out 'README_FIRST.txt')
           Copy-Item deploy/chrome_policy.reg (Join-Path $out 'chrome_policy.reg')
           Copy-Item sdk/LICENSE (Join-Path $out 'CHROMIUM_CONTENT_ANALYSIS_SDK_LICENSE.txt')
-          Get-FileHash (Join-Path $out 'DVCContentAnalysisAgent.exe') -Algorithm SHA256 | ForEach-Object { $_.Hash + '  DVCContentAnalysisAgent.exe' } | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
+
+          $hashLines = @()
+          Get-ChildItem $out -File | ForEach-Object {
+            $h = Get-FileHash $_.FullName -Algorithm SHA256
+            $hashLines += ($h.Hash + '  ' + $_.Name)
+          }
+          $hashLines | Set-Content -Encoding ascii (Join-Path $out 'SHA256.txt')
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
