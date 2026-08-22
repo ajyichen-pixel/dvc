@@ -34,9 +34,9 @@ jobs:
         run: |
           $m = Get-Content extension/manifest.json -Raw | ConvertFrom-Json
           if ($m.manifest_version -ne 3) { throw 'Manifest V3 required' }
-          $host = Get-Content native_host/native_host_manifest.json -Raw | ConvertFrom-Json
-          if ($host.name -ne 'com.trcore.dvc_upload_guard') { throw 'Native host name mismatch' }
-          if ($host.allowed_origins[0] -ne 'chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/') { throw 'Extension ID mismatch' }
+          $nativeManifest = Get-Content native_host/native_host_manifest.json -Raw | ConvertFrom-Json
+          if ($nativeManifest.name -ne 'com.trcore.dvc_upload_guard') { throw 'Native host name mismatch' }
+          if ($nativeManifest.allowed_origins[0] -ne 'chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/') { throw 'Extension ID mismatch' }
 
       - name: Publish self-contained native host
         shell: pwsh
