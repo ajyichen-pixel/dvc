@@ -1,0 +1,4 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"OnFileAttachedEnterpriseConnector"="[{\"service_provider\":\"local_system_agent\",\"enable\":[{\"url_list\":[\"*\"],\"tags\":[\"dlp\"]}],\"block_until_verdict\":1}]"
