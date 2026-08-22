@@ -29,11 +29,20 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Validate extension manifests
+      - name: Validate extension manifests and policy
         shell: pwsh
         run: |
           $m = Get-Content extension/manifest.json -Raw | ConvertFrom-Json
           if ($m.manifest_version -ne 3) { throw 'Manifest V3 required' }
+          if ($m.version -ne '1.1.0') { throw 'Extension version 1.1.0 required' }
+          if (-not ($m.permissions -contains 'storage')) { throw 'Managed storage permission missing' }
+          if ($m.storage.managed_schema -ne 'policy_schema.json') { throw 'Managed policy schema mapping missing' }
+          $schema = Get-Content extension/policy_schema.json -Raw | ConvertFrom-Json
+          if (-not $schema.properties.RedactionTermsJson) { throw 'RedactionTermsJson policy missing' }
+          if (-not (Test-Path deploy_native/DVC_BROWSER_POLICY.reg)) { throw 'Browser policy registry file missing' }
+          $reg = Get-Content deploy_native/DVC_BROWSER_POLICY.reg -Raw
+          if ($reg -notmatch 'RedactionTermsJson') { throw 'Redaction policy registry value missing' }
+          if ($reg -notmatch 'cdmogelilldmfcioieahdnaocmillhcl') { throw 'Policy extension ID mismatch' }
           $nativeManifest = Get-Content native_host/native_host_manifest.json -Raw | ConvertFrom-Json
           if ($nativeManifest.name -ne 'com.trcore.dvc_upload_guard') { throw 'Native host name mismatch' }
           if ($nativeManifest.allowed_origins[0] -ne 'chrome-extension://cdmogelilldmfcioieahdnaocmillhcl/') { throw 'Extension ID mismatch' }
@@ -54,6 +63,15 @@ jobs:
           & build/host/DVCUploadGuardHost.exe --selftest
           if ($LASTEXITCODE -ne 0) { throw 'selftest failed' }
 
+      - name: Static interception regression checks
+        shell: pwsh
+        run: |
+          $c = Get-Content extension/content.js -Raw
+          if ($c -notmatch "window.addEventListener\('input'") { throw 'input interception missing' }
+          if ($c -notmatch "window.addEventListener\('change'") { throw 'change interception missing' }
+          if ($c -notmatch 'browser-managed-policy') { throw 'managed policy loading missing' }
+          if ($c -notmatch 'dvcStartInputInspection') { throw 'safe file reinjection path missing' }
+
       - name: Package Windows test kit
         shell: pwsh
         run: |
@@ -69,6 +87,7 @@ jobs:
           Copy-Item deploy_native/START_TEST_EDGE.cmd (Join-Path $out 'START_TEST_EDGE.cmd') -Force
           Copy-Item deploy_native/GET_TEST_BROWSER.ps1 (Join-Path $out 'GET_TEST_BROWSER.ps1') -Force
           Copy-Item deploy_native/VERIFY.cmd (Join-Path $out 'VERIFY.cmd') -Force
+          Copy-Item deploy_native/DVC_BROWSER_POLICY.reg (Join-Path $out 'DVC_BROWSER_POLICY.reg') -Force
           Copy-Item deploy_native/README_FIRST.txt (Join-Path $out 'README_FIRST.txt') -Force
           $lines = Get-ChildItem $out -Recurse -File | Sort-Object FullName | ForEach-Object {
             $h = Get-FileHash $_.FullName -Algorithm SHA256
