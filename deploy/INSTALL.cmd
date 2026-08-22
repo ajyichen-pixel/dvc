@@ -23,16 +23,17 @@ if errorlevel 1 (
   exit /b 1
 )
 
-reg import "%~dp0chrome_policy.reg"
-if errorlevel 1 (
-  echo [FAIL] Unable to import Chrome policy.
-  pause
-  exit /b 1
+REM IMPORTANT: OnFileAttachedEnterpriseConnector is cloud-only in Chrome.
+REM Do NOT install it through HKLM/GPO. It must arrive from Chrome Enterprise Core.
+reg query "HKLM\SOFTWARE\Policies\Google\Chrome" /v OnFileAttachedEnterpriseConnector >nul 2>nul
+if not errorlevel 1 (
+  echo [WARN] Legacy platform OnFileAttachedEnterpriseConnector value detected.
+  echo [WARN] This connector policy is cloud-only and this local value must not be used as proof of activation.
 )
 
 schtasks /Run /TN "DVC Content Analysis Agent" >nul
 timeout /t 2 /nobreak >nul
-tasklist /FI "IMAGENAME eq DVCContentAnalysisAgent.exe" | find /I "DVCContentAnalysisAgent.exe" >nul
+powershell.exe -NoProfile -Command "$p=Get-Process -Name 'DVCContentAnalysisAgent' -ErrorAction SilentlyContinue; if($p){exit 0}else{exit 1}"
 if errorlevel 1 (
   echo [WARN] Agent did not remain running. Run VERIFY.cmd and send the AGENT BOOT LOG.
 ) else (
@@ -41,6 +42,7 @@ if errorlevel 1 (
 
 echo.
 echo [PASS] DVC Content Analysis Agent V1 installed.
-echo Restart Chrome, then open chrome://policy and click Reload policies.
+echo [REQUIRED] Enroll Chrome in Chrome Enterprise Core and enable Local Content Analysis in Google Admin Console.
+echo [REQUIRED] chrome://policy must show OnFileAttachedEnterpriseConnector delivered by cloud management.
 echo Log: %ProgramData%\DVC\ContentAnalysis\logs\dvc_content_analysis.log
 pause
