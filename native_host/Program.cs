@@ -7,11 +7,11 @@ using System.Xml.Linq;
 
 internal static class Program
 {
-    private const string Version = "1.0.1";
+    private const string Version = "1.1.0";
     private const int MaxFileBytes = 512 * 1024;
-    private const string Redacted = "[DVC-REDACTED]";
+    private const string DefaultReplacement = "[DVC-REDACTED]";
 
-    private static readonly string[] SensitiveTerms =
+    private static readonly string[] DefaultSensitiveTerms =
     {
         "\u570B\u6C11\u8EAB\u5206\u8B49",
         "\u5C45\u6C11\u8EAB\u4EFD\u8BC1",
@@ -95,20 +95,25 @@ internal static class Program
             return NativeResponse.Block("V1 test limit is 512 KB", Version);
         }
 
+        var terms = NormalizeTerms(request.Terms);
+        var replacement = NormalizeReplacement(request.Replacement);
+        var policySource = string.IsNullOrWhiteSpace(request.PolicySource) ? "host-default" : request.PolicySource!;
+        Log($"POLICY source={Safe(policySource)} terms={terms.Length} replacement={Safe(replacement)}");
+
         var ext = Path.GetExtension(request.Name).ToLowerInvariant();
         try
         {
             if (ext == ".docx")
             {
-                var result = SanitizeDocx(inputBytes);
+                var result = SanitizeDocx(inputBytes, terms, replacement);
                 if (result.Matches == 0)
                 {
-                    Log($"ALLOW name={Safe(request.Name)} type=docx bytes={inputBytes.Length} matches=0");
-                    return NativeResponse.Allow(request.Name, request.Mime, Version);
+                    Log($"ALLOW name={Safe(request.Name)} type=docx bytes={inputBytes.Length} matches=0 policy={Safe(policySource)}");
+                    return NativeResponse.Allow(request.Name, request.Mime, Version, policySource);
                 }
 
                 var safeName = SafeOutputName(request.Name);
-                Log($"REWRITE name={Safe(request.Name)} safe={Safe(safeName)} type=docx bytes={inputBytes.Length} out={result.Bytes.Length} matches={result.Matches}");
+                Log($"REWRITE name={Safe(request.Name)} safe={Safe(safeName)} type=docx bytes={inputBytes.Length} out={result.Bytes.Length} matches={result.Matches} policy={Safe(policySource)}");
                 return NativeResponse.Rewrite(
                     safeName,
                     string.IsNullOrWhiteSpace(request.Mime)
@@ -116,23 +121,24 @@ internal static class Program
                         : request.Mime,
                     Convert.ToBase64String(result.Bytes),
                     result.Matches,
-                    Version);
+                    Version,
+                    policySource);
             }
 
             if (IsTextExtension(ext))
             {
                 var text = DecodeText(inputBytes);
-                var result = SanitizeText(text);
+                var result = SanitizeText(text, terms, replacement);
                 if (result.Matches == 0)
                 {
-                    Log($"ALLOW name={Safe(request.Name)} type=text bytes={inputBytes.Length} matches=0");
-                    return NativeResponse.Allow(request.Name, request.Mime, Version);
+                    Log($"ALLOW name={Safe(request.Name)} type=text bytes={inputBytes.Length} matches=0 policy={Safe(policySource)}");
+                    return NativeResponse.Allow(request.Name, request.Mime, Version, policySource);
                 }
 
                 var output = new UTF8Encoding(false).GetBytes(result.Text);
                 var safeName = SafeOutputName(request.Name);
-                Log($"REWRITE name={Safe(request.Name)} safe={Safe(safeName)} type=text bytes={inputBytes.Length} out={output.Length} matches={result.Matches}");
-                return NativeResponse.Rewrite(safeName, request.Mime, Convert.ToBase64String(output), result.Matches, Version);
+                Log($"REWRITE name={Safe(request.Name)} safe={Safe(safeName)} type=text bytes={inputBytes.Length} out={output.Length} matches={result.Matches} policy={Safe(policySource)}");
+                return NativeResponse.Rewrite(safeName, request.Mime, Convert.ToBase64String(output), result.Matches, Version, policySource);
             }
 
             Log($"BLOCK name={Safe(request.Name)} bytes={inputBytes.Length} reason=unsupported_type ext={Safe(ext)}");
@@ -145,7 +151,26 @@ internal static class Program
         }
     }
 
-    private static (byte[] Bytes, int Matches) SanitizeDocx(byte[] input)
+    private static string[] NormalizeTerms(string[]? supplied)
+    {
+        if (supplied is null || supplied.Length == 0) return DefaultSensitiveTerms;
+        var terms = supplied
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(500)
+            .ToArray();
+        return terms.Length == 0 ? DefaultSensitiveTerms : terms;
+    }
+
+    private static string NormalizeReplacement(string? supplied)
+    {
+        if (string.IsNullOrWhiteSpace(supplied)) return DefaultReplacement;
+        var value = supplied.Trim();
+        return value.Length <= 128 ? value : DefaultReplacement;
+    }
+
+    private static (byte[] Bytes, int Matches) SanitizeDocx(byte[] input, string[] terms, string replacement)
     {
         using var stream = new MemoryStream();
         stream.Write(input, 0, input.Length);
@@ -171,13 +196,13 @@ internal static class Program
                 using (var reader = new StreamReader(entry.Open(), Encoding.UTF8, true, 4096, false))
                     xml = reader.ReadToEnd();
 
-                var result = SanitizeWordXml(xml);
+                var result = SanitizeWordXml(xml, terms, replacement);
                 if (result.Matches == 0) continue;
 
                 totalMatches += result.Matches;
                 entry.Delete();
-                var replacement = archive.CreateEntry(name, CompressionLevel.Optimal);
-                using var writer = new StreamWriter(replacement.Open(), new UTF8Encoding(false));
+                var replacementEntry = archive.CreateEntry(name, CompressionLevel.Optimal);
+                using var writer = new StreamWriter(replacementEntry.Open(), new UTF8Encoding(false));
                 writer.Write(result.Xml);
             }
         }
@@ -199,7 +224,7 @@ internal static class Program
             || file.Equals("comments.xml", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static (string Xml, int Matches) SanitizeWordXml(string xml)
+    private static (string Xml, int Matches) SanitizeWordXml(string xml, string[] terms, string replacement)
     {
         var doc = XDocument.Parse(xml, LoadOptions.PreserveWhitespace);
         XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
@@ -207,7 +232,7 @@ internal static class Program
 
         foreach (var textNode in doc.Descendants(w + "t"))
         {
-            var result = SanitizeText(textNode.Value);
+            var result = SanitizeText(textNode.Value, terms, replacement);
             if (result.Matches == 0) continue;
             textNode.Value = result.Text;
             matches += result.Matches;
@@ -216,18 +241,18 @@ internal static class Program
         return (doc.ToString(SaveOptions.DisableFormatting), matches);
     }
 
-    private static (string Text, int Matches) SanitizeText(string input)
+    private static (string Text, int Matches) SanitizeText(string input, string[] terms, string replacement)
     {
         var text = input;
         var matches = 0;
 
-        foreach (var term in SensitiveTerms)
+        foreach (var term in terms)
         {
             var regex = new Regex(Regex.Escape(term), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
             var count = regex.Matches(text).Count;
             if (count == 0) continue;
             matches += count;
-            text = regex.Replace(text, Redacted);
+            text = regex.Replace(text, replacement);
         }
 
         foreach (var regex in SensitiveRegexes)
@@ -235,7 +260,7 @@ internal static class Program
             var count = regex.Matches(text).Count;
             if (count == 0) continue;
             matches += count;
-            text = regex.Replace(text, Redacted);
+            text = regex.Replace(text, replacement);
         }
 
         return (text, matches);
@@ -313,7 +338,7 @@ internal static class Program
         try
         {
             var input = CreateSelfTestDocx();
-            var result = SanitizeDocx(input);
+            var result = SanitizeDocx(input, DefaultSensitiveTerms, DefaultReplacement);
             using var ms = new MemoryStream(result.Bytes);
             using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
             var entry = zip.GetEntry("word/document.xml") ?? throw new InvalidDataException("Self-test document missing document.xml");
@@ -323,7 +348,7 @@ internal static class Program
             var leaked = xml.Contains("\u8B77\u7167", StringComparison.OrdinalIgnoreCase)
                 || xml.Contains("\u570B\u6C11\u8EAB\u5206\u8B49", StringComparison.OrdinalIgnoreCase);
 
-            if (result.Matches < 2 || leaked || !xml.Contains(Redacted, StringComparison.Ordinal))
+            if (result.Matches < 2 || leaked || !xml.Contains(DefaultReplacement, StringComparison.Ordinal))
             {
                 Console.WriteLine("DVC_UPLOAD_GUARD_SELFTEST_FAIL");
                 return 10;
@@ -384,6 +409,9 @@ internal static class Program
         public string? Name { get; set; }
         public string? Mime { get; set; }
         public string? Data { get; set; }
+        public string[]? Terms { get; set; }
+        public string? Replacement { get; set; }
+        public string? PolicySource { get; set; }
     }
 
     private sealed class NativeResponse
@@ -396,8 +424,9 @@ internal static class Program
         public int Matches { get; set; }
         public string? Reason { get; set; }
         public string? Version { get; set; }
+        public string? PolicySource { get; set; }
 
-        public static NativeResponse Allow(string? name, string? mime, string version) => new()
+        public static NativeResponse Allow(string? name, string? mime, string version, string? policySource = null) => new()
         {
             Ok = true,
             Action = "allow",
@@ -405,10 +434,11 @@ internal static class Program
             Mime = mime,
             Matches = 0,
             Reason = "No sensitive content detected",
-            Version = version
+            Version = version,
+            PolicySource = policySource
         };
 
-        public static NativeResponse Rewrite(string name, string? mime, string data, int matches, string version) => new()
+        public static NativeResponse Rewrite(string name, string? mime, string data, int matches, string version, string? policySource = null) => new()
         {
             Ok = true,
             Action = "rewrite",
@@ -417,7 +447,8 @@ internal static class Program
             Data = data,
             Matches = matches,
             Reason = "Sensitive content de-identified",
-            Version = version
+            Version = version,
+            PolicySource = policySource
         };
 
         public static NativeResponse Block(string reason, string version) => new()
