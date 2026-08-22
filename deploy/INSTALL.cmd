@@ -12,7 +12,9 @@ if not exist "%DST%" mkdir "%DST%"
 copy /y "%~dp0DVCContentAnalysisAgent.exe" "%DST%\DVCContentAnalysisAgent.exe" >nul
 copy /y "%~dp0DVC_DOCX_SCAN.ps1" "%DST%\DVC_DOCX_SCAN.ps1" >nul
 copy /y "%~dp0START_AGENT.cmd" "%DST%\START_AGENT.cmd" >nul
+for %%F in ("%~dp0*.dll") do if exist "%%~fF" copy /y "%%~fF" "%DST%\%%~nxF" >nul
 
+schtasks /End /TN "DVC Content Analysis Agent" >nul 2>nul
 schtasks /Delete /TN "DVC Content Analysis Agent" /F >nul 2>nul
 schtasks /Create /TN "DVC Content Analysis Agent" /SC ONSTART /RU SYSTEM /RL HIGHEST /TR "\"%DST%\START_AGENT.cmd\"" /F
 if errorlevel 1 (
@@ -29,6 +31,14 @@ if errorlevel 1 (
 )
 
 schtasks /Run /TN "DVC Content Analysis Agent" >nul
+timeout /t 2 /nobreak >nul
+tasklist /FI "IMAGENAME eq DVCContentAnalysisAgent.exe" | find /I "DVCContentAnalysisAgent.exe" >nul
+if errorlevel 1 (
+  echo [WARN] Agent did not remain running. Run VERIFY.cmd and send the AGENT BOOT LOG.
+) else (
+  echo [PASS] Agent process is running.
+)
+
 echo.
 echo [PASS] DVC Content Analysis Agent V1 installed.
 echo Restart Chrome, then open chrome://policy and click Reload policies.
