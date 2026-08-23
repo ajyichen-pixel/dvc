@@ -1,5 +1,6 @@
 name: Build DVC Browser Upload Diagnostic V1
 
+# Diagnostic V1 build trigger
 permissions:
   contents: write
   issues: write
