@@ -101,3 +101,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_A_RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
+
+# trigger: focused TEST-A build
