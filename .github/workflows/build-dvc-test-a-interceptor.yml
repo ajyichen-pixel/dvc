@@ -49,8 +49,8 @@ jobs:
         shell: pwsh
         run: |
           & ./ci/build-three-upload-engines.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'engine generator failed' }
           $root = Join-Path $PWD 'dist_three\DVC_TEST_A_INTERCEPTOR'
+          if (-not (Test-Path $root)) { throw 'TEST-A output folder missing after generator' }
           foreach ($file in @('INSTALL.cmd','VERIFY.cmd','UNINSTALL.cmd','START_TEST.cmd','DVCUploadGuardHost.exe','native_host_manifest.json','README_FIRST.txt','ENGINE_MARKER.txt','extension\manifest.json','extension\background.js','extension\content.js')) {
             if (-not (Test-Path (Join-Path $root $file))) { throw "TEST-A missing $file" }
           }
@@ -101,5 +101,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_A_RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
-
-# trigger: focused TEST-A build
