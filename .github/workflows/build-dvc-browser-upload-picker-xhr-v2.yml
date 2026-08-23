@@ -1,0 +1,100 @@
+name: Build DVC Browser Upload Picker XHR V2
+
+permissions:
+  contents: write
+  issues: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+    paths:
+      - 'ci/build-dvc-browser-upload-diagnostic-v1.ps1'
+      - 'ci/patch-dvc-browser-upload-picker-xhr-v2.ps1'
+      - '.github/workflows/build-dvc-browser-upload-picker-xhr-v2.yml'
+      - 'native_host/**'
+      - 'extension/manifest.json'
+      - 'deploy_native/GET_TEST_BROWSER.ps1'
+  workflow_dispatch:
+
+jobs:
+  build-picker-xhr-v2:
+    runs-on: windows-2022
+    steps:
+      - name: Report start
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "DVC_PICKER_XHR_V2 RUN_ID=${{ github.run_id }} STATUS=STARTED SHA=${{ github.sha }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'selftest failed' }
+
+      - name: Build base diagnostic package
+        shell: pwsh
+        run: |
+          & ./ci/build-dvc-browser-upload-diagnostic-v1.ps1
+          if (-not (Test-Path 'dist_diag\DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1\extension\manifest.json')) { throw 'base diagnostic package missing' }
+
+      - name: Apply Picker XHR V2 patch
+        shell: pwsh
+        run: |
+          & ./ci/patch-dvc-browser-upload-picker-xhr-v2.ps1
+          if (-not (Test-Path 'dist_diag\DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1\extension\picker_xhr_v2_main.js')) { throw 'V2 MAIN patch missing' }
+          if (-not (Test-Path 'dist_diag\DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1\extension\picker_xhr_v2_isolated.js')) { throw 'V2 ISOLATED patch missing' }
+
+      - name: Verify Picker XHR V2 instrumentation
+        shell: pwsh
+        run: |
+          $root='dist_diag\DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1'
+          $main=Get-Content "$root\extension\picker_xhr_v2_main.js" -Raw
+          $iso=Get-Content "$root\extension\picker_xhr_v2_isolated.js" -Raw
+          foreach($s in @('FileSystemFileHandle','getFile','PICKER_GETFILE_CAPTURED','PICKER_SAFE_FILE_RETURNED','XHR_DIRECT_SANITIZE_REQUEST','XHR_DIRECT_SAFE_SEND','FETCH_DIRECT_SANITIZE_REQUEST','DVC_PICKER_SANITIZE_REQUEST')) { if($main -notmatch [regex]::Escape($s)){ throw "MAIN marker missing: $s" } }
+          foreach($s in @('PICKER_ISOLATED_FILE_RECEIVED','PICKER_HOST_RESPONSE','DVC_PICKER_SANITIZE_RESPONSE')) { if($iso -notmatch [regex]::Escape($s)){ throw "ISOLATED marker missing: $s" } }
+          $m=Get-Content "$root\extension\manifest.json" -Raw | ConvertFrom-Json
+          if($m.version -ne '2.0.0'){ throw 'manifest version is not 2.0.0' }
+          if(($m.content_scripts | Where-Object { $_.js -contains 'picker_xhr_v2_main.js' }).Count -lt 1){ throw 'MAIN V2 script not in manifest' }
+          if(($m.content_scripts | Where-Object { $_.js -contains 'picker_xhr_v2_isolated.js' }).Count -lt 1){ throw 'ISOLATED V2 script not in manifest' }
+          & "$root\DVCUploadGuardHost.exe" --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'packaged host selftest failed' }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist_zip_v2 -Force | Out-Null
+          Compress-Archive -Path 'dist_diag\DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1\*' -DestinationPath 'dist_zip_v2\DVC_BROWSER_UPLOAD_PICKER_XHR_V2_WINDOWS.zip' -Force
+          $zip=Get-Item 'dist_zip_v2\DVC_BROWSER_UPLOAD_PICKER_XHR_V2_WINDOWS.zip'
+          if($zip.Length -lt 1000000){ throw 'ZIP unexpectedly small' }
+          Get-FileHash $zip.FullName -Algorithm SHA256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_BROWSER_UPLOAD_PICKER_XHR_V2_WINDOWS
+          path: dist_diag/DVC_BROWSER_UPLOAD_DIAGNOSTIC_V1
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Report result
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "DVC_PICKER_XHR_V2 RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
