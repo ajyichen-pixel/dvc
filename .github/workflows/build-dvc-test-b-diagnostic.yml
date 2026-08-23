@@ -1,0 +1,117 @@
+name: Build DVC TEST-B Diagnostic
+
+permissions:
+  contents: write
+  issues: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+    paths:
+      - 'ci/build-test-b-webpilot-mainworld.ps1'
+      - 'ci/patch-test-b-diagnostic.ps1'
+      - '.github/workflows/build-dvc-test-b-diagnostic.yml'
+      - 'native_host/**'
+      - 'extension/manifest.json'
+      - 'deploy_native/GET_TEST_BROWSER.ps1'
+  workflow_dispatch:
+
+jobs:
+  build-test-b-diagnostic:
+    runs-on: windows-2022
+    steps:
+      - name: Report build start
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_B_DIAG RUN_ID=${{ github.run_id }} STATUS=STARTED SHA=${{ github.sha }}"
+
+      - name: Checkout DVC repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish DVC sanitization host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'DOCX sanitization selftest failed' }
+
+      - name: Generate TEST-B base package
+        shell: pwsh
+        run: |
+          & ./ci/build-test-b-webpilot-mainworld.ps1
+          if (-not (Test-Path 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD\extension\content.js')) { throw 'base TEST-B generation failed' }
+
+      - name: Apply TEST-B diagnostic patch
+        shell: pwsh
+        run: |
+          & ./ci/patch-test-b-diagnostic.ps1
+          if (-not (Test-Path 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD\extension\page_hook.js')) { throw 'diagnostic patch failed' }
+
+      - name: Verify diagnostic instrumentation
+        shell: pwsh
+        run: |
+          $root = Join-Path $PWD 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD'
+          $m = Get-Content (Join-Path $root 'extension\manifest.json') -Raw | ConvertFrom-Json
+          if ($m.version -ne '1.2.0') { throw 'diagnostic manifest version mismatch' }
+          $content = Get-Content (Join-Path $root 'extension\content.js') -Raw
+          $page = Get-Content (Join-Path $root 'extension\page_hook.js') -Raw
+          $bg = Get-Content (Join-Path $root 'extension\background.js') -Raw
+          foreach ($marker in @('DVC_TEST_B_DIAG_ISOLATED','ISOLATED_WORLD_READY','COMPOSED_PATH_CAPTURE','DYNAMIC_FILE_INPUT_ADDED')) {
+            if ($content -notmatch [regex]::Escape($marker)) { throw "content diagnostic marker missing: $marker" }
+          }
+          foreach ($marker in @('DVC_TEST_B_DIAG_MAINWORLD','MAIN_WORLD_READY','SHOW_OPEN_FILE_PICKER','FORMDATA_APPEND','XHR_SEND')) {
+            if ($page -notmatch [regex]::Escape($marker)) { throw "page diagnostic marker missing: $marker" }
+          }
+          if ($bg -notmatch 'DVC_HEALTH') { throw 'background health diagnostic missing' }
+          & (Join-Path $root 'DVCUploadGuardHost.exe') --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'packaged host selftest failed' }
+
+      - name: Create diagnostic ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist_zip_b_diag -Force | Out-Null
+          Compress-Archive -Path 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD\*' -DestinationPath 'dist_zip_b_diag\DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS.zip' -Force
+          $zip = Get-Item 'dist_zip_b_diag\DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS.zip'
+          if ($zip.Length -lt 1000000) { throw 'ZIP unexpectedly small' }
+          Get-FileHash $zip.FullName -Algorithm SHA256
+
+      - name: Upload TEST-B diagnostic artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS
+          path: dist_test_b/DVC_TEST_B_WEBPILOT_MAINWORLD
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish stable diagnostic ZIP on branch
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item 'dist_zip_b_diag\DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS.zip' 'release\DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS.zip' -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_TEST_B_DIAGNOSTIC_V1_2_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Publish DVC TEST-B diagnostic ZIP [skip ci]'
+            git push origin HEAD:dvc-upload-guard-native-v1
+          }
+
+      - name: Report build result
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_B_DIAG RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
