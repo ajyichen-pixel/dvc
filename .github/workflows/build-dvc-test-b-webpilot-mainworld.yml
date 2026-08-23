@@ -49,7 +49,7 @@ jobs:
         shell: pwsh
         run: |
           & ./ci/build-test-b-webpilot-mainworld.ps1
-          if ($LASTEXITCODE -ne 0) { throw 'TEST-B generator failed' }
+          if (-not $?) { throw 'TEST-B generator failed' }
 
       - name: Verify TEST-B package
         shell: pwsh
