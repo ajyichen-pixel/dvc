@@ -2,6 +2,7 @@ name: Build DVC TEST-B Webpilot MainWorld
 
 permissions:
   contents: write
+  issues: write
 
 on:
   push:
@@ -19,6 +20,13 @@ jobs:
   build-test-b:
     runs-on: windows-2022
     steps:
+      - name: Report build start
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_B_MAINWORLD RUN_ID=${{ github.run_id }} STATUS=STARTED SHA=${{ github.sha }}"
+
       - name: Checkout DVC repo
         uses: actions/checkout@v4
 
@@ -92,3 +100,11 @@ jobs:
             git commit -m 'Publish DVC TEST-B MainWorld ZIP [skip ci]'
             git push origin HEAD:dvc-upload-guard-native-v1
           }
+
+      - name: Report build result
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_B_MAINWORLD RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
