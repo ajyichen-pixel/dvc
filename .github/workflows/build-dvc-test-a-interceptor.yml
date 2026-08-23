@@ -1,0 +1,103 @@
+name: Build DVC TEST-A Interceptor
+
+permissions:
+  contents: write
+  issues: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+    paths:
+      - '.github/workflows/build-dvc-test-a-interceptor.yml'
+      - 'ci/build-three-upload-engines.ps1'
+      - 'native_host/**'
+      - 'extension/manifest.json'
+      - 'deploy_native/GET_TEST_BROWSER.ps1'
+  workflow_dispatch:
+
+jobs:
+  build-test-a:
+    runs-on: windows-2022
+    steps:
+      - name: Report TEST-A start
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_A_RUN_ID=${{ github.run_id }} STATUS=STARTED SHA=${{ github.sha }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build DVC sanitization host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'DOCX sanitization selftest failed' }
+
+      - name: Generate TEST-A package
+        shell: pwsh
+        run: |
+          & ./ci/build-three-upload-engines.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'engine generator failed' }
+          $root = Join-Path $PWD 'dist_three\DVC_TEST_A_INTERCEPTOR'
+          foreach ($file in @('INSTALL.cmd','VERIFY.cmd','UNINSTALL.cmd','START_TEST.cmd','DVCUploadGuardHost.exe','native_host_manifest.json','README_FIRST.txt','ENGINE_MARKER.txt','extension\manifest.json','extension\background.js','extension\content.js')) {
+            if (-not (Test-Path (Join-Path $root $file))) { throw "TEST-A missing $file" }
+          }
+          $nm = Get-Content (Join-Path $root 'native_host_manifest.json') -Raw | ConvertFrom-Json
+          if ($nm.name -ne 'com.trcore.dvc_upload_guard_test_a') { throw 'TEST-A native host mismatch' }
+          $js = Get-Content (Join-Path $root 'extension\content.js') -Raw
+          foreach ($marker in @('DVC_ENGINE_A_PROXY_PICKER','dvcAFileClick','dvcAInspectInto','dvcSetFilesNative')) {
+            if ($js -notmatch [regex]::Escape($marker)) { throw "TEST-A marker missing: $marker" }
+          }
+          & (Join-Path $root 'DVCUploadGuardHost.exe') --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'TEST-A host selftest failed' }
+
+      - name: Package TEST-A ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist_zip -Force | Out-Null
+          Compress-Archive -Path 'dist_three\DVC_TEST_A_INTERCEPTOR\*' -DestinationPath 'dist_zip\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' -Force
+          $zip = Get-Item 'dist_zip\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip'
+          if ($zip.Length -lt 1000000) { throw 'TEST-A ZIP unexpectedly small' }
+          Get-FileHash $zip.FullName -Algorithm SHA256
+
+      - name: Upload TEST-A artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_A_INTERCEPTOR_WINDOWS
+          path: dist_three/DVC_TEST_A_INTERCEPTOR
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish stable TEST-A ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item 'dist_zip\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' 'release\DVC_TEST_A_INTERCEPTOR_WINDOWS.zip' -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_TEST_A_INTERCEPTOR_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Publish DVC TEST-A Interceptor ZIP [skip ci]'
+            git push origin HEAD:dvc-upload-guard-native-v1
+          }
+
+      - name: Report TEST-A result
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 2 --repo "${{ github.repository }}" --body "TEST_A_RUN_ID=${{ github.run_id }} STATUS=${{ job.status }} SHA=${{ github.sha }}"
