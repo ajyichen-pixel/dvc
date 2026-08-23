@@ -1,0 +1,94 @@
+name: Build DVC TEST-B Webpilot MainWorld
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - dvc-upload-guard-native-v1
+    paths:
+      - 'ci/build-test-b-webpilot-mainworld.ps1'
+      - '.github/workflows/build-dvc-test-b-webpilot-mainworld.yml'
+      - 'native_host/**'
+      - 'extension/manifest.json'
+      - 'deploy_native/GET_TEST_BROWSER.ps1'
+  workflow_dispatch:
+
+jobs:
+  build-test-b:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout DVC repo
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Publish DVC sanitization host
+        shell: pwsh
+        run: |
+          dotnet publish native_host/DVCUploadGuardHost.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o build/host
+          if ($LASTEXITCODE -ne 0) { throw 'dotnet publish failed' }
+          & build/host/DVCUploadGuardHost.exe --health
+          if ($LASTEXITCODE -ne 0) { throw 'health failed' }
+          & build/host/DVCUploadGuardHost.exe --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'DOCX sanitization selftest failed' }
+
+      - name: Generate TEST-B MainWorld package
+        shell: pwsh
+        run: |
+          & ./ci/build-test-b-webpilot-mainworld.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'TEST-B generator failed' }
+
+      - name: Verify TEST-B package
+        shell: pwsh
+        run: |
+          $root = Join-Path $PWD 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD'
+          foreach ($file in @('INSTALL.cmd','VERIFY.cmd','UNINSTALL.cmd','START_TEST.cmd','DVCUploadGuardHost.exe','native_host_manifest.json','README_FIRST.txt','ENGINE_MARKER.txt','extension\manifest.json','extension\background.js','extension\content.js','extension\page_hook.js')) {
+            if (-not (Test-Path (Join-Path $root $file))) { throw "missing $file" }
+          }
+          $m = Get-Content (Join-Path $root 'extension\manifest.json') -Raw | ConvertFrom-Json
+          if ($m.content_scripts.Count -lt 2) { throw 'MAIN/ISOLATED content scripts missing' }
+          if ($m.content_scripts[0].world -ne 'MAIN') { throw 'MAIN world hook not configured' }
+          $hook = Get-Content (Join-Path $root 'extension\page_hook.js') -Raw
+          foreach ($marker in @('FormData.prototype.append','FileReader.prototype','Blob.prototype','XMLHttpRequest.prototype.send','window.fetch','DVC_TEST_B_SAFE_MAP')) {
+            if ($hook -notmatch [regex]::Escape($marker)) { throw "MAIN-world interception marker missing: $marker" }
+          }
+          $content = Get-Content (Join-Path $root 'extension\content.js') -Raw
+          if ($content -notmatch 'DVC_ENGINE_B_FRAMEWORK_SETTER_V2') { throw 'framework setter V2 marker missing' }
+          & (Join-Path $root 'DVCUploadGuardHost.exe') --selftest
+          if ($LASTEXITCODE -ne 0) { throw 'packaged host selftest failed' }
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist_zip_b -Force | Out-Null
+          Compress-Archive -Path 'dist_test_b\DVC_TEST_B_WEBPILOT_MAINWORLD\*' -DestinationPath 'dist_zip_b\DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS.zip' -Force
+          $zip = Get-Item 'dist_zip_b\DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS.zip'
+          if ($zip.Length -lt 1000000) { throw 'ZIP unexpectedly small' }
+          Get-FileHash $zip.FullName -Algorithm SHA256
+
+      - name: Upload TEST-B artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS
+          path: dist_test_b/DVC_TEST_B_WEBPILOT_MAINWORLD
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish stable TEST-B ZIP on branch
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item 'dist_zip_b\DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS.zip' 'release\DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS.zip' -Force
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add release/DVC_TEST_B_WEBPILOT_MAINWORLD_WINDOWS.zip
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Publish DVC TEST-B MainWorld ZIP [skip ci]'
+            git push origin HEAD:dvc-upload-guard-native-v1
+          }
