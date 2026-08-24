@@ -20,7 +20,7 @@ jobs:
       - name: Prepare screenshot script
         run: |
           mkdir -p screenshots
-          cat > /tmp/capture.js <<'NODE'
+          cat > capture.js <<'NODE'
           const { chromium } = require('playwright-core');
           const fs = require('fs');
 
@@ -92,7 +92,7 @@ jobs:
         run: npm install --no-save playwright-core@1.55.0
 
       - name: Capture live Chinese and English homepages
-        run: node /tmp/capture.js
+        run: node capture.js
 
       - name: Upload verification artifact
         if: always()
