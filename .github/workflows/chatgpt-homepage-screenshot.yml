@@ -1,0 +1,101 @@
+name: ChatGPT DVC Homepage Screenshot Verification
+
+on:
+  push:
+    branches:
+      - chatgpt-homepage-screenshot-20260825
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare screenshot script
+        run: |
+          mkdir -p screenshots
+          cat > /tmp/capture.js <<'NODE'
+          const { chromium } = require('playwright-core');
+          const fs = require('fs');
+
+          async function capture(page, name, url) {
+            const consoleErrors = [];
+            const pageErrors = [];
+            page.on('console', msg => {
+              if (msg.type() === 'error') consoleErrors.push(msg.text());
+            });
+            page.on('pageerror', err => pageErrors.push(String(err)));
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+            await page.waitForTimeout(20000);
+            const info = await page.evaluate(() => {
+              const body = document.body;
+              const text = (body?.innerText || '').replace(/\s+/g, ' ').trim();
+              const visible = [...document.querySelectorAll('body *')].filter(el => {
+                const s = getComputedStyle(el);
+                const r = el.getBoundingClientRect();
+                return s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0 && r.width > 1 && r.height > 1;
+              });
+              return {
+                title: document.title,
+                url: location.href,
+                bodyTextLength: text.length,
+                bodyTextPreview: text.slice(0, 1500),
+                bodyScrollHeight: body?.scrollHeight || 0,
+                bodyScrollWidth: body?.scrollWidth || 0,
+                visibleElementCount: visible.length,
+                zhRoot: !!document.getElementById('dvcHome65ZH'),
+                enRoot: !!document.getElementById('dvcHome65EN'),
+                zhCards: document.querySelectorAll('#dvcHome65ZH .d65-card').length,
+                enCards: document.querySelectorAll('#dvcHome65EN .d65-card').length,
+                rootDisplay: (() => {
+                  const a = document.getElementById('dvcHome65ZH');
+                  const b = document.getElementById('dvcHome65EN');
+                  return {
+                    zh: a ? getComputedStyle(a).display : null,
+                    en: b ? getComputedStyle(b).display : null
+                  };
+                })()
+              };
+            });
+            info.consoleErrors = consoleErrors;
+            info.pageErrors = pageErrors;
+            fs.writeFileSync(`screenshots/${name}.json`, JSON.stringify(info, null, 2));
+            await page.screenshot({ path: `screenshots/${name}-viewport.png`, fullPage: false });
+            await page.screenshot({ path: `screenshots/${name}-full.png`, fullPage: true });
+            return info;
+          }
+
+          (async () => {
+            const browser = await chromium.launch({
+              executablePath: '/usr/bin/google-chrome',
+              headless: true,
+              args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+            });
+            const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
+            const zh = await capture(await context.newPage(), 'zh', 'https://www.dvc.tw/?v=github-live-check-20260825');
+            const en = await capture(await context.newPage(), 'en', 'https://www.dvc.tw/en?v=github-live-check-20260825');
+            fs.writeFileSync('screenshots/summary.json', JSON.stringify({ zh, en }, null, 2));
+            await browser.close();
+          })().catch(err => {
+            fs.writeFileSync('screenshots/fatal-error.txt', String(err && err.stack || err));
+            process.exitCode = 1;
+          });
+          NODE
+
+      - name: Install browser automation library
+        run: npm install --no-save playwright-core@1.55.0
+
+      - name: Capture live Chinese and English homepages
+        run: node /tmp/capture.js
+
+      - name: Upload verification artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvc-homepage-live-verification
+          path: screenshots/
+          retention-days: 1
+          if-no-files-found: error
