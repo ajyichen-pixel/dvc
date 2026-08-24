@@ -15,27 +15,31 @@ permissions:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Prepare screenshot script
+      - name: Install browser automation library
+        run: npm install --no-save playwright-core@1.55.0
+
+      - name: Capture and validate live homepages
         run: |
           mkdir -p screenshots
           cat > capture.js <<'NODE'
           const { chromium } = require('playwright-core');
           const fs = require('fs');
 
-          async function capture(page, name, url) {
+          async function capture(browser, name, url, viewport, expectedRoot, expectedCards) {
+            const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+            const page = await context.newPage();
             const consoleErrors = [];
             const pageErrors = [];
-            page.on('console', msg => {
-              if (msg.type() === 'error') consoleErrors.push(msg.text());
-            });
+            page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
             page.on('pageerror', err => pageErrors.push(String(err)));
             await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-            await page.waitForTimeout(20000);
-            const info = await page.evaluate(() => {
+            await page.waitForTimeout(18000);
+            const info = await page.evaluate(({ expectedRoot }) => {
               const body = document.body;
               const text = (body?.innerText || '').replace(/\s+/g, ' ').trim();
+              const root = document.getElementById(expectedRoot);
               const visible = [...document.querySelectorAll('body *')].filter(el => {
                 const s = getComputedStyle(el);
                 const r = el.getBoundingClientRect();
@@ -45,29 +49,30 @@ jobs:
                 title: document.title,
                 url: location.href,
                 bodyTextLength: text.length,
-                bodyTextPreview: text.slice(0, 1500),
+                bodyTextPreview: text.slice(0, 1800),
                 bodyScrollHeight: body?.scrollHeight || 0,
                 bodyScrollWidth: body?.scrollWidth || 0,
                 visibleElementCount: visible.length,
-                zhRoot: !!document.getElementById('dvcHome65ZH'),
-                enRoot: !!document.getElementById('dvcHome65EN'),
-                zhCards: document.querySelectorAll('#dvcHome65ZH .d65-card').length,
-                enCards: document.querySelectorAll('#dvcHome65EN .d65-card').length,
-                rootDisplay: (() => {
-                  const a = document.getElementById('dvcHome65ZH');
-                  const b = document.getElementById('dvcHome65EN');
-                  return {
-                    zh: a ? getComputedStyle(a).display : null,
-                    en: b ? getComputedStyle(b).display : null
-                  };
-                })()
+                expectedRoot,
+                rootExists: !!root,
+                rootDisplay: root ? getComputedStyle(root).display : null,
+                rootVisibility: root ? getComputedStyle(root).visibility : null,
+                rootRect: root ? { width: root.getBoundingClientRect().width, height: root.getBoundingClientRect().height } : null,
+                cards: root ? root.querySelectorAll('.d65-card').length : 0,
+                featureIds: root ? [...root.querySelectorAll('.d65-card[id]')].map(x => x.id).slice(-20) : [],
+                grids: ['zhGrid16','zhGrid36','zhGrid51','enGrid16','enGrid36','enGrid51'].reduce((o,id) => {
+                  const el=document.getElementById(id); o[id]=el?el.children.length:null; return o;
+                }, {})
               };
-            });
+            }, { expectedRoot });
             info.consoleErrors = consoleErrors;
             info.pageErrors = pageErrors;
+            info.expectedCards = expectedCards;
+            info.ok = info.rootExists && info.rootDisplay !== 'none' && info.rootVisibility !== 'hidden' && info.rootRect?.width > 300 && info.rootRect?.height > 1000 && info.cards === expectedCards && info.bodyTextLength > 3000 && info.bodyScrollHeight > 5000;
             fs.writeFileSync(`screenshots/${name}.json`, JSON.stringify(info, null, 2));
             await page.screenshot({ path: `screenshots/${name}-viewport.png`, fullPage: false });
             await page.screenshot({ path: `screenshots/${name}-full.png`, fullPage: true });
+            await context.close();
             return info;
           }
 
@@ -77,28 +82,28 @@ jobs:
               headless: true,
               args: ['--no-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
             });
-            const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
-            const zh = await capture(await context.newPage(), 'zh', 'https://www.dvc.tw/?v=github-live-check-20260825');
-            const en = await capture(await context.newPage(), 'en', 'https://www.dvc.tw/en?v=github-live-check-20260825');
-            fs.writeFileSync('screenshots/summary.json', JSON.stringify({ zh, en }, null, 2));
+            const stamp = 'robust65-v3-20260825';
+            const results = {};
+            results.zhDesktop = await capture(browser, 'zh-desktop', `https://www.dvc.tw/?v=${stamp}`, { width: 1440, height: 1000 }, 'dvcHome65ZH', 65);
+            results.enDesktop = await capture(browser, 'en-desktop', `https://www.dvc.tw/en?v=${stamp}`, { width: 1440, height: 1000 }, 'dvcHome65EN', 65);
+            results.zhMobile = await capture(browser, 'zh-mobile', `https://www.dvc.tw/?v=${stamp}&device=mobile`, { width: 390, height: 844 }, 'dvcHome65ZH', 65);
+            results.enMobile = await capture(browser, 'en-mobile', `https://www.dvc.tw/en?v=${stamp}&device=mobile`, { width: 390, height: 844 }, 'dvcHome65EN', 65);
+            fs.writeFileSync('screenshots/summary.json', JSON.stringify(results, null, 2));
             await browser.close();
+            const failed = Object.entries(results).filter(([,v]) => !v.ok).map(([k,v]) => `${k}: cards=${v.cards}, display=${v.rootDisplay}, text=${v.bodyTextLength}, height=${v.bodyScrollHeight}`);
+            if (failed.length) throw new Error('Live homepage verification failed: ' + failed.join(' | '));
           })().catch(err => {
             fs.writeFileSync('screenshots/fatal-error.txt', String(err && err.stack || err));
             process.exitCode = 1;
           });
           NODE
-
-      - name: Install browser automation library
-        run: npm install --no-save playwright-core@1.55.0
-
-      - name: Capture live Chinese and English homepages
-        run: node capture.js
+          node capture.js
 
       - name: Upload verification artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: dvc-homepage-live-verification
+          name: dvc-homepage-live-verification-v3
           path: screenshots/
           retention-days: 1
           if-no-files-found: error
