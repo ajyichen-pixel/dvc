@@ -14,7 +14,7 @@ async function captureBottom(browser, name, viewport) {
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
   page.on('pageerror', err => pageErrors.push(String(err)));
 
-  const url = 'https://www.dvc.tw/?v=bottom-pro15-v2-verified';
+  const url = 'https://www.dvc.tw/?v=bottom-pro15-v3-true-bottom';
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
   await page.waitForFunction(() => {
     const s = document.getElementById('dvcHomeBottomPro15ZH');
@@ -25,7 +25,6 @@ async function captureBottom(browser, name, viewport) {
 
   const info = await page.evaluate(() => {
     const sec = document.getElementById('dvcHomeBottomPro15ZH');
-    const host = document.getElementById('dvcFlag00');
     const dvc60 = document.getElementById('dvc60');
     const cs = sec ? getComputedStyle(sec) : null;
     const r = sec ? sec.getBoundingClientRect() : null;
@@ -44,7 +43,7 @@ async function captureBottom(browser, name, viewport) {
       headingCount: headings.length,
       headings,
       afterDvc60,
-      isLastChildOfHome: !!(sec && host && host.lastElementChild === sec),
+      isLastChildOfPage: !!(sec && document.body.lastElementChild === sec),
       bodyScrollHeight: document.body?.scrollHeight || 0,
       bodyTextLength: bodyText.length,
       consoleErrors: [],
@@ -53,7 +52,7 @@ async function captureBottom(browser, name, viewport) {
   });
   info.consoleErrors = consoleErrors;
   info.pageErrors = pageErrors;
-  info.ok = info.sectionExists && info.display !== 'none' && info.visibility !== 'hidden' && Number(info.opacity || 1) > 0 && info.articleCount === 15 && info.headingCount === 15 && info.afterDvc60 && info.isLastChildOfHome;
+  info.ok = info.sectionExists && info.display !== 'none' && info.visibility !== 'hidden' && Number(info.opacity || 1) > 0 && info.articleCount === 15 && info.headingCount === 15 && info.afterDvc60 && info.isLastChildOfPage;
 
   await page.locator('#dvcHomeBottomPro15ZH').scrollIntoViewIfNeeded();
   await page.waitForTimeout(1200);
@@ -76,7 +75,7 @@ async function captureBottom(browser, name, viewport) {
   results.mobile = await captureBottom(browser, 'zh-mobile', { width: 390, height: 844 });
   fs.writeFileSync('screenshots/bottom15-summary.json', JSON.stringify(results, null, 2));
   await browser.close();
-  const failed = Object.entries(results).filter(([,v]) => !v.ok).map(([k,v]) => `${k}: exists=${v.sectionExists}, display=${v.display}, articles=${v.articleCount}, headings=${v.headingCount}, after60=${v.afterDvc60}, last=${v.isLastChildOfHome}`);
+  const failed = Object.entries(results).filter(([,v]) => !v.ok).map(([k,v]) => `${k}: exists=${v.sectionExists}, display=${v.display}, articles=${v.articleCount}, headings=${v.headingCount}, after60=${v.afterDvc60}, lastPage=${v.isLastChildOfPage}`);
   if (failed.length) throw new Error('Bottom 15 verification failed: ' + failed.join(' | '));
 })().catch(err => {
   fs.writeFileSync('screenshots/fatal-error.txt', String(err && err.stack || err));
