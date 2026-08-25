@@ -46,6 +46,8 @@ async function capture(browser, name, url, viewport, rootId, locale) {
       tag: el.tagName,
       rect: { x: Math.round(el.getBoundingClientRect().x), y: Math.round(el.getBoundingClientRect().y), w: Math.round(el.getBoundingClientRect().width), h: Math.round(el.getBoundingClientRect().height) }
     }));
+    const heroCta = root ? root.querySelector('.hero .cta') : null;
+    const heroCtaRect = heroCta ? heroCta.getBoundingClientRect() : null;
     const text = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
     return {
       title: document.title,
@@ -68,6 +70,8 @@ async function capture(browser, name, url, viewport, rootId, locale) {
       backgroundSamples: backgrounds.slice(0, 15),
       navExists: !!document.getElementById('trStableNav'),
       navPosition: (() => { const n = document.getElementById('trStableNav'); return n ? getComputedStyle(n).position : null; })(),
+      heroCtaRect: heroCtaRect ? { width: Math.round(heroCtaRect.width), height: Math.round(heroCtaRect.height) } : null,
+      heroCtaBorder: heroCta ? getComputedStyle(heroCta).borderTopWidth : null,
       fixedCandidates
     };
   }, { rootId, expectedIds });
@@ -76,7 +80,8 @@ async function capture(browser, name, url, viewport, rootId, locale) {
   info.ok = info.rootExists && info.rootDisplay !== 'none' && info.rootVisibility !== 'hidden' &&
     info.rootRect?.width > 300 && info.rootRect?.height > 6000 && info.visibleIds.length >= 18 &&
     info.staticCardCount === 0 && info.bodyTextLength > 5000 && info.bodyScrollHeight > 7000 &&
-    (info.imageCount + info.backgroundCount) >= 3 && info.navExists && info.navPosition === 'fixed';
+    (info.imageCount + info.backgroundCount) >= 3 && info.navExists && info.navPosition === 'fixed' &&
+    info.heroCtaRect && info.heroCtaRect.height < 160 && info.heroCtaBorder === '0px';
   fs.writeFileSync(`screenshots/${name}.json`, JSON.stringify(info, null, 2));
   await page.screenshot({ path: `screenshots/${name}-viewport.png`, fullPage: false });
   await page.screenshot({ path: `screenshots/${name}-full.png`, fullPage: true });
@@ -87,7 +92,7 @@ async function capture(browser, name, url, viewport, rootId, locale) {
 (async () => {
   fs.mkdirSync('screenshots', { recursive: true });
   const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox','--disable-dev-shm-usage','--disable-gpu'] });
-  const stamp = 'rich-photo-restore-v5';
+  const stamp = 'rich-photo-restore-v6';
   const results = {};
   results.zhDesktop = await capture(browser, 'zh-desktop', `https://www.dvc.tw/?v=${stamp}`, { width: 1440, height: 1000 }, 'dvcFlag00', 'zh-TW');
   results.enDesktop = await capture(browser, 'en-desktop', `https://www.dvc.tw/en?v=${stamp}`, { width: 1440, height: 1000 }, 'dvcFlag00en', 'en-US');
@@ -95,7 +100,7 @@ async function capture(browser, name, url, viewport, rootId, locale) {
   results.enMobile = await capture(browser, 'en-mobile', `https://www.dvc.tw/en?v=${stamp}&device=mobile`, { width: 390, height: 844 }, 'dvcFlag00en', 'en-US');
   fs.writeFileSync('screenshots/summary.json', JSON.stringify(results, null, 2));
   await browser.close();
-  const failed = Object.entries(results).filter(([,v]) => !v.ok).map(([k,v]) => `${k}: url=${v.url}, root=${v.rootDisplay}, rich=${v.visibleIds.length}, cards=${v.staticCardCount}, text=${v.bodyTextLength}, height=${v.bodyScrollHeight}, media=${v.imageCount + v.backgroundCount}, nav=${v.navExists}/${v.navPosition}, missing=${v.missingIds.join(',')}`);
+  const failed = Object.entries(results).filter(([,v]) => !v.ok).map(([k,v]) => `${k}: url=${v.url}, root=${v.rootDisplay}, rich=${v.visibleIds.length}, cards=${v.staticCardCount}, text=${v.bodyTextLength}, height=${v.bodyScrollHeight}, media=${v.imageCount + v.backgroundCount}, nav=${v.navExists}/${v.navPosition}, cta=${JSON.stringify(v.heroCtaRect)}/${v.heroCtaBorder}, missing=${v.missingIds.join(',')}`);
   if (failed.length) throw new Error('Rich homepage verification failed: ' + failed.join(' | '));
 })().catch(err => {
   fs.writeFileSync('screenshots/fatal-error.txt', String(err && err.stack || err));
