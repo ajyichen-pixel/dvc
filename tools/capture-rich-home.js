@@ -27,7 +27,8 @@ async function captureBottom(browser, name, viewport) {
     const sec = document.getElementById('dvcHomeBottomPro15ZH');
     const dvc60 = document.getElementById('dvc60');
     const cs = sec ? getComputedStyle(sec) : null;
-    const r = sec ? sec.getBoundingClientRect() : null;
+    const rect = sec ? sec.getBoundingClientRect() : null;
+    const absTop = rect ? rect.top + window.scrollY : 0;
     const headings = sec ? [...sec.querySelectorAll('h3')].map(x => (x.textContent || '').trim()) : [];
     const bodyText = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
     const afterDvc60 = !!(sec && dvc60 && (dvc60.compareDocumentPosition(sec) & Node.DOCUMENT_POSITION_FOLLOWING));
@@ -38,7 +39,7 @@ async function captureBottom(browser, name, viewport) {
       display: cs?.display || null,
       visibility: cs?.visibility || null,
       opacity: cs?.opacity || null,
-      rect: r ? { width: Math.round(r.width), height: Math.round(r.height), top: Math.round(r.top) } : null,
+      rect: rect ? { width: Math.round(rect.width), height: Math.round(rect.height), top: Math.round(absTop) } : null,
       articleCount: sec ? sec.querySelectorAll('article').length : 0,
       headingCount: headings.length,
       headings,
@@ -54,10 +55,19 @@ async function captureBottom(browser, name, viewport) {
   info.pageErrors = pageErrors;
   info.ok = info.sectionExists && info.display !== 'none' && info.visibility !== 'hidden' && Number(info.opacity || 1) > 0 && info.articleCount === 15 && info.headingCount === 15 && info.afterDvc60 && info.isLastChildOfPage;
 
-  await page.locator('#dvcHomeBottomPro15ZH').scrollIntoViewIfNeeded();
-  await page.waitForTimeout(1200);
-  await page.screenshot({ path: `screenshots/${name}-bottom-viewport.png`, fullPage: false });
-  await page.locator('#dvcHomeBottomPro15ZH').screenshot({ path: `screenshots/${name}-bottom-section.png` });
+  const top = info.rect.top;
+  const height = info.rect.height;
+  const vh = viewport.height;
+  const positions = [
+    ['top', Math.max(0, top - 10)],
+    ['middle', Math.max(0, top + Math.floor((height - vh) / 2))],
+    ['end', Math.max(0, top + height - vh)]
+  ];
+  for (const [label, y] of positions) {
+    await page.evaluate(y => window.scrollTo(0, y), y);
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: `screenshots/${name}-bottom-${label}.png`, fullPage: false });
+  }
   fs.writeFileSync(`screenshots/${name}-bottom.json`, JSON.stringify(info, null, 2));
   await context.close();
   return info;
