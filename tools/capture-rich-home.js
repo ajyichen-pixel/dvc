@@ -58,15 +58,17 @@ async function captureBottom(browser, name, viewport) {
   const top = info.rect.top;
   const height = info.rect.height;
   const vh = viewport.height;
-  const positions = [
-    ['top', Math.max(0, top - 10)],
-    ['middle', Math.max(0, top + Math.floor((height - vh) / 2))],
-    ['end', Math.max(0, top + height - vh)]
+  const maxY = Math.max(0, info.bodyScrollHeight - vh);
+  const clips = [
+    ['top', Math.min(maxY, Math.max(0, top))],
+    ['middle', Math.min(maxY, Math.max(0, top + Math.floor((height - vh) / 2)))],
+    ['end', Math.min(maxY, Math.max(0, top + height - vh))]
   ];
-  for (const [label, y] of positions) {
-    await page.evaluate(y => window.scrollTo(0, y), y);
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: `screenshots/${name}-bottom-${label}.png`, fullPage: false });
+  for (const [label, y] of clips) {
+    await page.screenshot({
+      path: `screenshots/${name}-bottom-${label}.png`,
+      clip: { x: 0, y, width: viewport.width, height: vh }
+    });
   }
   fs.writeFileSync(`screenshots/${name}-bottom.json`, JSON.stringify(info, null, 2));
   await context.close();
