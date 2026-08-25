@@ -8,32 +8,25 @@ async function capture(browser, cfg) {
   page.on('console', msg => { if (msg.type() === 'error') consoleErrors.push(msg.text()); });
   page.on('pageerror', err => pageErrors.push(String(err)));
   await page.goto(cfg.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
-  await page.waitForSelector('#' + cfg.rootId, { state: 'attached', timeout: 90000 });
-  await page.evaluate((rootId) => { const s=document.getElementById(rootId); if(s) s.scrollIntoView({block:'start'}); }, cfg.rootId);
-  await page.waitForTimeout(8000);
+  await page.waitForSelector('#' + cfg.rootId, { state: 'attached', timeout: 70000 });
   await page.evaluate(async (rootId) => {
     const s=document.getElementById(rootId); if(!s) return;
-    const imgs=[...s.querySelectorAll('img')];
-    for (const img of imgs) { img.loading='eager'; try { await img.decode(); } catch(e) {} }
+    const imgs=[...s.querySelectorAll('img')]; imgs.forEach(i=>i.loading='eager');
+    const r=s.getBoundingClientRect(), top=r.top+window.scrollY, h=r.height, vh=window.innerHeight;
+    for(let y=top;y<top+h;y+=Math.max(500,vh*0.8)){ window.scrollTo(0,y); await new Promise(res=>setTimeout(res,120)); }
+    s.scrollIntoView({block:'start'});
   }, cfg.rootId);
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(8000);
   const info = await page.evaluate((rootId) => {
     const sec=document.getElementById(rootId), dvc60=document.getElementById('dvc60');
     const cs=sec?getComputedStyle(sec):null, rect=sec?sec.getBoundingClientRect():null, imgs=sec?[...sec.querySelectorAll('img')]:[];
     const headings=sec?[...sec.querySelectorAll('.pc-copy h2')].map(x=>(x.textContent||'').trim()):[];
-    return {
-      url:location.href,title:document.title,sectionExists:!!sec,display:cs?.display||null,visibility:cs?.visibility||null,opacity:cs?.opacity||null,
-      rect:rect?{width:Math.round(rect.width),height:Math.round(rect.height),top:Math.round(rect.top+window.scrollY)}:null,
-      articleCount:sec?sec.querySelectorAll('article').length:0,photoCount:imgs.length,loadedPhotoCount:imgs.filter(i=>i.complete&&i.naturalWidth>900&&i.naturalHeight>500).length,
-      headingCount:headings.length,headings,afterDvc60:!!(sec&&dvc60&&(dvc60.compareDocumentPosition(sec)&Node.DOCUMENT_POSITION_FOLLOWING)),bodyScrollHeight:document.body?.scrollHeight||0
-    };
+    return {url:location.href,title:document.title,sectionExists:!!sec,display:cs?.display||null,visibility:cs?.visibility||null,opacity:cs?.opacity||null,rect:rect?{width:Math.round(rect.width),height:Math.round(rect.height),top:Math.round(rect.top+window.scrollY)}:null,articleCount:sec?sec.querySelectorAll('article').length:0,photoCount:imgs.length,loadedPhotoCount:imgs.filter(i=>i.complete&&i.naturalWidth>900&&i.naturalHeight>500).length,headingCount:headings.length,headings,afterDvc60:!!(sec&&dvc60&&(dvc60.compareDocumentPosition(sec)&Node.DOCUMENT_POSITION_FOLLOWING)),bodyScrollHeight:document.body?.scrollHeight||0};
   }, cfg.rootId);
   info.consoleErrors=consoleErrors; info.pageErrors=pageErrors;
   info.ok=info.sectionExists&&info.display!=='none'&&info.visibility!=='hidden'&&Number(info.opacity||1)>0&&info.articleCount===15&&info.photoCount===15&&info.loadedPhotoCount===15&&info.headingCount===15&&info.afterDvc60;
   const vh=cfg.viewport.height,vw=cfg.viewport.width,top=info.rect.top,height=info.rect.height,maxY=Math.max(0,info.bodyScrollHeight-vh);
-  for(const [label,y] of [['top',Math.min(maxY,Math.max(0,top))],['middle',Math.min(maxY,Math.max(0,top+Math.floor((height-vh)/2)))],['end',Math.min(maxY,Math.max(0,top+height-vh))]]){
-    await page.screenshot({path:`screenshots/${cfg.name}-${label}.png`,clip:{x:0,y,width:vw,height:vh}});
-  }
+  for(const [label,y] of [['top',Math.min(maxY,Math.max(0,top))],['middle',Math.min(maxY,Math.max(0,top+Math.floor((height-vh)/2)))],['end',Math.min(maxY,Math.max(0,top+height-vh))]]) await page.screenshot({path:`screenshots/${cfg.name}-${label}.png`,clip:{x:0,y,width:vw,height:vh}});
   fs.writeFileSync(`screenshots/${cfg.name}.json`,JSON.stringify(info,null,2)); await context.close(); return info;
 }
 
