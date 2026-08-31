@@ -1,0 +1,195 @@
+name: DVC Industries Live Browser Verification
+
+on:
+  push:
+    branches:
+      - verify-dvc-industries-live-20260825
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright Chromium
+        shell: bash
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium
+
+      - name: Verify live Chinese and English industry pages
+        shell: bash
+        run: |
+          mkdir -p dvc-live-verify
+          cat > dvc-live-verify/verify.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+
+          const cases = [
+            { lang: 'zh', url: 'https://www.dvc.tw/%E7%94%A2%E6%A5%AD%E6%87%89%E7%94%A8?github_live_verify=20260825' },
+            { lang: 'en', url: 'https://www.dvc.tw/industries?github_live_verify=20260825' },
+          ];
+
+          const browser = await chromium.launch({ headless: true });
+          const results = [];
+
+          const visible = (el) => {
+            if (!el) return false;
+            const s = getComputedStyle(el);
+            const r = el.getBoundingClientRect();
+            return s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0 && r.width > 10 && r.height > 10;
+          };
+
+          for (const item of cases) {
+            const page = await browser.newPage({ viewport: { width: 1600, height: 1200 }, deviceScaleFactor: 1 });
+            page.on('console', msg => console.log(`[${item.lang} console] ${msg.type()}: ${msg.text()}`));
+            page.on('pageerror', err => console.log(`[${item.lang} pageerror] ${err.message}`));
+
+            const response = await page.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await page.waitForTimeout(12000);
+            await page.screenshot({ path: `dvc-live-verify/${item.lang}-hub.png`, fullPage: true });
+
+            const before = await page.evaluate((lang) => {
+              const hub = document.getElementById('dvc-industry-hub');
+              const root = document.getElementById('dvc-industries-v9');
+              const buttons = hub ? [...hub.querySelectorAll('.ind')] : [];
+              const style = (el) => el ? getComputedStyle(el) : null;
+              const box = (el) => el ? el.getBoundingClientRect().toJSON() : null;
+              return {
+                lang,
+                title: document.title,
+                bodyTextLength: (document.body?.innerText || '').trim().length,
+                bodyTextSample: (document.body?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 500),
+                hubExists: !!hub,
+                hubVisible: !!hub && style(hub).display !== 'none' && style(hub).visibility !== 'hidden' && box(hub).height > 100,
+                rootExists: !!root,
+                rootVisible: !!root && style(root).display !== 'none' && style(root).visibility !== 'hidden' && box(root).height > 100,
+                industryButtonCount: buttons.length,
+                industryButtonLabels: buttons.slice(0, 35).map(x => (x.textContent || '').replace(/\s+/g, ' ').trim()),
+                siteContainer: (() => {
+                  const s = document.getElementById('SITE_CONTAINER');
+                  if (!s) return { exists: false };
+                  const cs = style(s), b = box(s);
+                  return { exists: true, display: cs.display, visibility: cs.visibility, height: b.height };
+                })(),
+              };
+            }, item.lang);
+
+            let clickError = null;
+            try {
+              const first = page.locator('#dvc-industry-hub .ind').first();
+              await first.waitFor({ state: 'visible', timeout: 30000 });
+              await first.click({ force: true });
+              await page.waitForTimeout(5000);
+            } catch (e) {
+              clickError = e.message;
+            }
+
+            await page.screenshot({ path: `dvc-live-verify/${item.lang}-industry-01.png`, fullPage: true });
+
+            const after = await page.evaluate((lang) => {
+              const candidates = (code) => [
+                document.querySelector(`.sec[data-n="${code}"]`),
+                document.getElementById(`dvc${code.slice(0,2)}${code.slice(-1).toLowerCase()}-live`),
+                document.getElementById(`dvc${code.slice(0,2)}${code.slice(-1).toLowerCase()}-live-fixed`),
+              ].filter(Boolean);
+
+              const isVisible = (el) => {
+                if (!el) return false;
+                const s = getComputedStyle(el), r = el.getBoundingClientRect();
+                return s.display !== 'none' && s.visibility !== 'hidden' && Number(s.opacity || 1) > 0 && r.width > 10 && r.height > 10;
+              };
+
+              const bg = (el) => {
+                if (!el) return '';
+                const p = el.querySelector('.photo') || el.querySelector('.stage');
+                if (!p) return '';
+                return p.style.backgroundImage || getComputedStyle(p).backgroundImage || '';
+              };
+
+              const rows = {};
+              for (const code of ['01-A', '01-B', '01-C']) {
+                const list = candidates(code);
+                const el = list.find(isVisible) || list[0] || null;
+                rows[code] = {
+                  count: list.length,
+                  exists: !!el,
+                  visible: isVisible(el),
+                  id: el?.id || null,
+                  dataN: el?.dataset?.n || null,
+                  rect: el ? el.getBoundingClientRect().toJSON() : null,
+                  backgroundImage: bg(el),
+                  heading: el?.querySelector('h1,h2,h3')?.textContent?.replace(/\s+/g, ' ').trim() || null,
+                };
+              }
+
+              const backgrounds = Object.values(rows).map(x => x.backgroundImage).filter(Boolean);
+              const de = [...document.querySelectorAll('[data-n$="-D"],[data-n$="-E"]')].filter(isVisible).map(x => x.dataset.n || x.id);
+              const allCodes = [...document.querySelectorAll('.sec[data-n]')]
+                .map(x => x.dataset.n)
+                .filter(x => /^\d{2}-[A-E]$/.test(x));
+              const uniqueIndustries = [...new Set(allCodes.map(x => x.slice(0,2)))];
+
+              return {
+                lang,
+                rows,
+                threeDistinctBackgrounds: new Set(backgrounds).size === 3,
+                backgroundCount: backgrounds.length,
+                uniqueBackgroundCount: new Set(backgrounds).size,
+                visibleDE: de,
+                allDECount: [...document.querySelectorAll('[data-n$="-D"],[data-n$="-E"]')].length,
+                uniqueIndustryCodesInDom: uniqueIndustries.length,
+                codeCountInDom: allCodes.length,
+                bodyTextSampleAfterClick: (document.body?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 800),
+              };
+            }, item.lang);
+
+            const passed = Boolean(
+              response && response.ok() &&
+              before.hubExists && before.hubVisible && before.rootExists && before.rootVisible &&
+              before.industryButtonCount === 30 &&
+              after.rows['01-A'].visible && after.rows['01-B'].visible && after.rows['01-C'].visible &&
+              after.threeDistinctBackgrounds && after.visibleDE.length === 0 && after.allDECount === 0
+            );
+
+            results.push({
+              lang: item.lang,
+              url: item.url,
+              httpStatus: response?.status() ?? null,
+              clickError,
+              before,
+              after,
+              passed,
+            });
+
+            await page.content().then(html => fs.writeFileSync(`dvc-live-verify/${item.lang}.html`, html));
+            await page.close();
+          }
+
+          await browser.close();
+          fs.writeFileSync('dvc-live-verify/results.json', JSON.stringify(results, null, 2));
+          console.log('DVC_VERIFY_RESULT=' + JSON.stringify(results));
+          console.log('DVC_VERIFY_ALL_PASSED=' + results.every(x => x.passed));
+          EOF
+          node dvc-live-verify/verify.mjs
+
+      - name: Upload live verification screenshots and DOM report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvc-industries-live-verification
+          path: dvc-live-verify
+          if-no-files-found: error
+          retention-days: 3

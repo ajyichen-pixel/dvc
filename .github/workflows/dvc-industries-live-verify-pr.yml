@@ -1,0 +1,107 @@
+name: DVC Industries PR Live Verification
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install Chromium
+        run: |
+          npm init -y >/dev/null 2>&1
+          npm install playwright@1.55.0 >/dev/null
+          npx playwright install --with-deps chromium
+      - name: Inspect live pages and capture screenshots
+        run: |
+          mkdir -p live-check
+          cat > live-check/check.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs';
+
+          const pages = [
+            ['zh', 'https://www.dvc.tw/%E7%94%A2%E6%A5%AD%E6%87%89%E7%94%A8?playwright_verify=20260825'],
+            ['en', 'https://www.dvc.tw/industries?playwright_verify=20260825'],
+          ];
+          const browser = await chromium.launch({ headless: true });
+          const report = [];
+
+          for (const [lang, url] of pages) {
+            const page = await browser.newPage({ viewport: { width: 1600, height: 1200 } });
+            const errors = [];
+            page.on('pageerror', e => errors.push(e.message));
+            page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+            const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
+            await page.waitForTimeout(15000);
+            await page.screenshot({ path: `live-check/${lang}-hub.png`, fullPage: true });
+
+            const before = await page.evaluate(() => {
+              const hub = document.getElementById('dvc-industry-hub');
+              const root = document.getElementById('dvc-industries-v9');
+              const vis = e => { if (!e) return false; const s=getComputedStyle(e),r=e.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&+s.opacity!==0&&r.width>10&&r.height>10; };
+              return {
+                hub: !!hub,
+                hubVisible: vis(hub),
+                root: !!root,
+                rootVisible: vis(root),
+                industries: hub ? hub.querySelectorAll('.ind').length : 0,
+                bodyText: (document.body?.innerText || '').replace(/\s+/g,' ').trim().slice(0,700),
+                siteContainer: (()=>{const e=document.getElementById('SITE_CONTAINER');return e?{visible:vis(e),height:e.getBoundingClientRect().height}:null})(),
+              };
+            });
+
+            let clickError = null;
+            try {
+              const first = page.locator('#dvc-industry-hub .ind').first();
+              await first.waitFor({ state: 'visible', timeout: 30000 });
+              await first.click({ force: true });
+              await page.waitForTimeout(6000);
+            } catch (e) { clickError = e.message; }
+
+            await page.screenshot({ path: `live-check/${lang}-01-abc.png`, fullPage: true });
+            const after = await page.evaluate(() => {
+              const vis = e => { if (!e) return false; const s=getComputedStyle(e),r=e.getBoundingClientRect(); return s.display!=='none'&&s.visibility!=='hidden'&&+s.opacity!==0&&r.width>10&&r.height>10; };
+              const find = code => {
+                const n=code.slice(0,2), l=code.slice(-1).toLowerCase();
+                const list=[document.querySelector(`.sec[data-n="${code}"]`),document.getElementById(`dvc${n}${l}-live`),document.getElementById(`dvc${n}${l}-live-fixed`)].filter(Boolean);
+                return list.find(vis)||list[0]||null;
+              };
+              const info = code => { const e=find(code), p=e?.querySelector('.photo')||e?.querySelector('.stage'); return { exists:!!e, visible:vis(e), id:e?.id||'', heading:e?.querySelector('h1,h2,h3')?.textContent?.replace(/\s+/g,' ').trim()||'', bg:p?(p.style.backgroundImage||getComputedStyle(p).backgroundImage||''):'' }; };
+              const abc={'01-A':info('01-A'),'01-B':info('01-B'),'01-C':info('01-C')};
+              const bgs=Object.values(abc).map(x=>x.bg).filter(Boolean);
+              return {
+                abc,
+                distinctBackgrounds:new Set(bgs).size,
+                visibleDE:[...document.querySelectorAll('[data-n$="-D"],[data-n$="-E"]')].filter(vis).map(x=>x.dataset.n||x.id),
+                allDE:document.querySelectorAll('[data-n$="-D"],[data-n$="-E"]').length,
+                bodyText:(document.body?.innerText||'').replace(/\s+/g,' ').trim().slice(0,1000),
+              };
+            });
+
+            const passed = response?.ok() && before.hubVisible && before.rootVisible && before.industries===30 && ['01-A','01-B','01-C'].every(k=>after.abc[k].visible) && after.distinctBackgrounds===3 && after.allDE===0;
+            report.push({ lang, url, http: response?.status() ?? null, before, after, clickError, errors, passed });
+            fs.writeFileSync(`live-check/${lang}.html`, await page.content());
+            await page.close();
+          }
+          await browser.close();
+          fs.writeFileSync('live-check/report.json', JSON.stringify(report,null,2));
+          console.log('DVC_LIVE_REPORT=' + JSON.stringify(report));
+          console.log('DVC_LIVE_ALL_PASSED=' + report.every(x=>x.passed));
+          EOF
+          node live-check/check.mjs
+      - name: Upload screenshots and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dvc-industries-live-check
+          path: live-check
+          retention-days: 3
