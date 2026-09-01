@@ -2,6 +2,10 @@
 
 Enterprise document security, DLP, AI data protection, de-identification, secure external sharing, insider risk, and manufacturing security insights for global organizations.
 
+## Latest insight
+
+- [1 September 2026 — After CAD Leaves Engineering: 7 Controls for Manufacturing IP](./2026-09-01-cad-manufacturing-ip.md)
+
 ## Multilingual articles
 
 - [English — How to Stop Confidential Files from Reaching Generative AI Tools](./en-ai-data-protection.md)
@@ -17,5 +21,5 @@ Enterprise document security, DLP, AI data protection, de-identification, secure
 Official website: https://www.dvc.tw/  
 Email: aj@trcore.com.tw  
 Facebook: https://www.facebook.com/share/19AKamY91a/?mibextid=wwXIfr  
-WhatsApp: https://wa.me/886925888909  
+WhatsApp: +886 925 888 909 — https://wa.me/886925888909  
 LINE ID: `jerry691109`
